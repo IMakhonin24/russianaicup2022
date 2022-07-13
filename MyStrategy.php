@@ -100,7 +100,6 @@ class MyStrategy
             ));
         }
 
-
         foreach ($this->myUnits as $unit) {
             $this->initForUnit($unit);
             $order[$unit->id] = new UnitOrder(
@@ -300,7 +299,10 @@ class MyStrategy
         if (Helper::isPointInCircle($unit->position, $this->constants->unitRadius, $targetPosition)) {
             return new Vec2(0, 0);
         } else {
-            return Helper::getVectorAB($unit->position, $targetPosition);
+            $vec = Helper::getVectorAB($unit->position, $targetPosition);
+            $vec = new Vec2($this->constants->maxUnitForwardSpeed * $vec->x, $this->constants->maxUnitForwardSpeed * $vec->y);//увеличение вектора, для скорости юнита
+            if (!is_null($this->debugInterface)){$this->debugInterface->add(new PolyLine([$unit->position, new Vec2($unit->position->x + $vec->x, $unit->position->y + $vec->y)], 0.3, new Color(255, 0, 0, 1)));}
+            return $vec;
         }
     }
 
@@ -331,6 +333,8 @@ class MyStrategy
 
     private function defineLootMap(Game $game): void
     {
+        //todo удалять hitorypot если его нет.
+
         $this->visibleWeapon = [];
         $this->visiblePot = [];
         $this->visibleAmmo = [];
