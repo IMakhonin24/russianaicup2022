@@ -92,17 +92,20 @@ class MyStrategy
         $this->init($game);
         $order = [];
 
-        $debugInterface->add(new Circle(
-            $game->zone->currentCenter,
-            $game->zone->currentRadius - 25,
-            new Color(0, 0, 255, 0.1)
-        ));
+        if (!is_null($this->debugInterface)){
+            $this->debugInterface->add(new Circle(
+                $game->zone->currentCenter,
+                $game->zone->currentRadius - 25,
+                new Color(0, 0, 255, 0.1)
+            ));
+        }
+
 
         foreach ($this->myUnits as $unit) {
             $this->initForUnit($unit);
             $order[$unit->id] = new UnitOrder(
                 $this->footController($game, $unit),
-                $this->eyeController($game, $unit, $debugInterface),
+                $this->eyeController($game, $unit),
                 $this->actionController($game, $unit)
             );
         }
@@ -123,15 +126,17 @@ class MyStrategy
         $lu12 = 0;
 
         $userFictiveRadius = $this->constants->unitRadius + 2;
-        $this->debugInterface->add(new Circle(
-            $unit->position,
-            $userFictiveRadius,
-            new Color(0, 255, 0, 0.2)
-        ));
+        if (!is_null($this->debugInterface)){
+            $this->debugInterface->add(new Circle(
+                $unit->position,
+                $userFictiveRadius,
+                new Color(0, 255, 0, 0.2)
+            ));
+        }
 
         foreach ($this->projectiles as $projectile) {
             if (Helper::isIntersectionLineAndCircle($projectile->position, new Vec2($projectile->position->x + $projectile->velocity->x, $projectile->position->y + $projectile->velocity->y), $unit->position, $userFictiveRadius)) {
-                $this->debugInterface->add(new PolyLine([$projectile->position, new Vec2($projectile->position->x + $projectile->velocity->x, $projectile->position->y + $projectile->velocity->y)], 0.1, new Color(0, 0, 0, 0.2)));
+                if (!is_null($this->debugInterface)){$this->debugInterface->add(new PolyLine([$projectile->position, new Vec2($projectile->position->x + $projectile->velocity->x, $projectile->position->y + $projectile->velocity->y)], 0.1, new Color(0, 0, 0, 0.2)));}
 
                 $lineA = $projectile->position;
                 $lineB = new Vec2($projectile->position->x + $projectile->velocity->x, $projectile->position->y + $projectile->velocity->y);
@@ -167,7 +172,7 @@ class MyStrategy
                 }
             } else {
                 //просто рисуем все пули
-                $this->debugInterface->add(new PolyLine([$projectile->position, new Vec2($projectile->position->x + $projectile->velocity->x, $projectile->position->y + $projectile->velocity->y)], 0.1, new Color(255, 255, 255, 0.1)));
+                if (!is_null($this->debugInterface)){$this->debugInterface->add(new PolyLine([$projectile->position, new Vec2($projectile->position->x + $projectile->velocity->x, $projectile->position->y + $projectile->velocity->y)], 0.1, new Color(255, 255, 255, 0.1)));}
             }
         }
 
@@ -224,7 +229,7 @@ class MyStrategy
                 }
             }
             $position = ($numberHit1 >= $numberHit2) ? $nextUnitPosition2 : $nextUnitPosition1;
-            $this->debugInterface->add(new PolyLine([$unit->position, $position], 0.1, new Color(0, 0, 255, 0.5)));
+            if (!is_null($this->debugInterface)){$this->debugInterface->add(new PolyLine([$unit->position, $position], 0.1, new Color(0, 0, 255, 0.5)));}
             return $this->goToPosition($unit, $position);
         }
 
@@ -236,25 +241,25 @@ class MyStrategy
         //Идем искать зелья
         if ($unit->shieldPotions < $this->constants->maxShieldPotionsInInventory && isset($this->nearestPotForMyUnits[$unit->id])) {
             $pot = $this->nearestPotForMyUnits[$unit->id];
-            $this->debugInterface->add(new PolyLine([$unit->position, $pot->position], 0.1, new Color(0, 0, 255, 0.5)));
+            if (!is_null($this->debugInterface)){$this->debugInterface->add(new PolyLine([$unit->position, $pot->position], 0.1, new Color(0, 0, 255, 0.5)));}
             return $this->goToPosition($unit, $pot->position);
         }
 
         return $this->goToPosition($unit, $unit->position); //Стоим на месте;
     }
 
-    private function eyeController(Game $game, Unit $unit, ?DebugInterface $debugInterface): Vec2
+    private function eyeController(Game $game, Unit $unit): Vec2
     {
         //осмотреться вправо вогруг каждые 5 сек
         if (($game->currentTick / $this->constants->ticksPerSecond) % 10 == 0) {
             $targetPosition = new Vec2($unit->direction->y, -$unit->direction->x);
-            $this->debugInterface->add(new PolyLine([$unit->position, $targetPosition], 0.1, new Color(0, 255, 0, 0.5)));
+            if (!is_null($this->debugInterface)){$this->debugInterface->add(new PolyLine([$unit->position, $targetPosition], 0.1, new Color(0, 255, 0, 0.5)));}
             return $targetPosition;
         }
 
         if (isset($this->targetEnemyForMyUnits[$unit->id])) {
             $targetForMyUnit = $this->targetEnemyForMyUnits[$unit->id];
-            $this->debugInterface->add(new PolyLine([$unit->position, $targetForMyUnit->position], 0.1, new Color(0, 255, 0, 0.5)));
+            if (!is_null($this->debugInterface)){$this->debugInterface->add(new PolyLine([$unit->position, $targetForMyUnit->position], 0.1, new Color(0, 255, 0, 0.5)));}
             return Helper::getVectorAB($unit->position, $targetForMyUnit->position);
         }
         return new Vec2($unit->direction->y, -$unit->direction->x);
@@ -277,7 +282,7 @@ class MyStrategy
             if ($distanceFromUnitToPot < $this->constants->unitRadius) {
                 $this->deleteFromHistoryLoot($pot);
                 if ($this->isDebugActive) {
-                    vvar_dump('Подбираем пот ' . $unit->shieldPotions . ' / ' . $this->constants->maxShieldPotionsInInventory);
+                    var_dump('Подбираем пот ' . $unit->shieldPotions . ' / ' . $this->constants->maxShieldPotionsInInventory);
                 }
                 return new Pickup($pot->id);
             }
