@@ -27,7 +27,9 @@ require_once 'Model/Constants.php';
 
 class MyStrategy
 {
+    
     const CNT_TICK_SAVE_SOUND = 20; //Сколько тиков будет храниться звук
+    const CNT_TICK_SAVE_HISTORY_ENEMY = 70; //Сколько тиков будет храниться звук
 
     private Constants $constants;
     private Game $game;
@@ -47,6 +49,11 @@ class MyStrategy
      * @var array | Unit[]
      */
     private array $targetEnemyForMyUnits;
+
+    /**
+     * @var array | MyUnit[]
+     */
+    private array $historyEnemies = []; //История примерного местоположения врагов
 
     /**
      * @var array | Loot[][]
@@ -470,7 +477,7 @@ class MyStrategy
         //===================Смотрю по кругу========================
     }
 
-    private function actionController(Game $game, Unit $unit): ActionOrder
+    private function actionController(Game $game, Unit $unit): ?ActionOrder
     {
         //если есть зелья и применяемое зелье не перекроет максимум то применяем зелье щита
         if ($unit->shieldPotions > 0 && $unit->shield + $this->constants->shieldPerPotion < $this->constants->maxShield) {
@@ -524,7 +531,7 @@ class MyStrategy
 
         $this->actionTypeForMyUnitsAction[$unit->id] = MyAction::DO_NOTHING;
         if (!is_null($this->debugInterface)){$this->debugInterface->add(new PlacedText(new Vec2($unit->position->x + 2, $unit->position->y), "Ничего не делаю", new Vec2(0, 0), 0.5, $this->MC->green1));}
-        return new Aim(false);
+        return null;
     }
 
 
@@ -605,10 +612,22 @@ class MyStrategy
         /** @var Unit[] $units */
         $units = $game->units;
         foreach ($units as $unit) {
+            if (!is_null($this->debugInterface)){$this->debugInterface->add(new PlacedText(new Vec2($unit->position->x-1, $unit->position->y-2), "ID = ".$unit->id, new Vec2(0, 0), 0.2, $this->MC->black1));}
+
             if ($unit->playerId == $game->myId) {
                 $this->myUnits[$unit->id] = $unit;
             } else {
                 $this->enemies[$unit->id] = $unit;
+                $this->historyEnemies[$unit->id] = new MyUnit($unit, $game->currentTick);
+            }
+        }
+
+        foreach ($this->historyEnemies as $enemyId => $historyEnemy) {
+            if ($historyEnemy->tick < $game->currentTick - self::CNT_TICK_SAVE_HISTORY_ENEMY){
+                unset($this->historyEnemies[$enemyId]);
+            } else {
+                if (!isset($this->enemies[$enemyId]) && !is_null($this->debugInterface)){$this->debugInterface->add(new PlacedText(new Vec2($historyEnemy->unit->position->x-1, $historyEnemy->unit->position->y), "ID = ".$historyEnemy->unit->id, new Vec2(0, 0), 0.2, $this->MC->black1));}
+                if (!isset($this->enemies[$enemyId]) && !is_null($this->debugInterface)){$this->debugInterface->add(new Circle($historyEnemy->unit->position, $this->constants->unitRadius+1, $this->MC->violet05));} //Рисуем примерную позицию звука
             }
         }
     }
@@ -616,6 +635,7 @@ class MyStrategy
     private function defineLootMap(Game $game): void
     {
         //todo удалять hitorypot если его нет.
+        //удалять историю лута через какое-то время
         //держать дистанцию
 
         $this->visibleWeapon = [];
@@ -1121,6 +1141,17 @@ class MyAction {
     const STAY = 150;
 }
 
+class MyUnit {
+    public Unit $unit;
+    public int $tick;
+
+    public function __construct(Unit $unit, $tick)
+    {
+        $this->unit = $unit;
+        $this->tick = $tick;
+    }
+}
+
 
 class MyColor {
     public Color $lightBlue01;
@@ -1159,6 +1190,10 @@ class MyColor {
     public Color $orange05;
     public Color $orange1;
 
+    public Color $violet01;
+    public Color $violet05;
+    public Color $violet1;
+
     public function __construct()
     {
         $this->lightBlue01 = new Color(0, 0, 50, 0.1);
@@ -1196,5 +1231,9 @@ class MyColor {
         $this->orange01 = new Color(255, 102, 0, 0.1);
         $this->orange05 = new Color(255, 102, 0, 0.5);
         $this->orange1 = new Color(255, 102, 0, 1);
+
+        $this->violet01 = new Color(128, 0, 255, 0.1);
+        $this->violet05 = new Color(128, 0, 255, 0.5);
+        $this->violet1 = new Color(128, 0, 255, 1);
     }
 }
