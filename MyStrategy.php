@@ -16,6 +16,7 @@ use Model\Item\Weapon;
 use Model\Loot;
 use Model\Order;
 use Model\Projectile;
+use Model\Sound;
 use Model\Unit;
 use Model\UnitOrder;
 use Model\Vec2;
@@ -26,6 +27,8 @@ require_once 'Model/Constants.php';
 
 class MyStrategy
 {
+    const CNT_TICK_SAVE_SOUND = 20; //Сколько тиков будет храниться звук
+
     private Constants $constants;
     private Game $game;
     private MyColor $MC;
@@ -90,6 +93,35 @@ class MyStrategy
     private array $projectiles; //Массив пуль
 
     /**
+     * @var array | MySound[]
+     */
+    private array $soundsSteps = []; //Массив звуков шагов
+    /**
+     * @var array | MySound[]
+     */
+    private array $soundsPistolShoot = []; //Массив звуков выстрел пистолета
+    /**
+     * @var array | MySound[]
+     */
+    private array $soundsGunShoot = []; //Массив звуков выстрел автомата
+    /**
+     * @var array | MySound[]
+     */
+    private array $soundsSniperShoot = []; //Массив звуков выстрел снайперки
+    /**
+     * @var array | MySound[]
+     */
+    private array $soundsPistolHit = []; //Массив звуков попадание пистолета
+    /**
+     * @var array | MySound[]
+     */
+    private array $soundsGunHit = []; //Массив звуков попадание автомата
+    /**
+     * @var array | MySound[]
+     */
+    private array $soundsSniperHit = []; //Массив звуков попадание снайперки
+
+    /**
      * @var Vec2[]
      */
     private array $actionForMyUnitsFoot; //Массив по юнитам. Точка Vec2 куда идет. Именно targetPosition a не вектор ускорения
@@ -127,6 +159,7 @@ class MyStrategy
         $this->defineUnitMap($game);
         $this->defineLootMap($game);
         $this->defineProjectilesMap($game);
+        $this->defineSoundsMap($game);
     }
 
     private function initForUnit(Unit $unit): void
@@ -345,6 +378,7 @@ class MyStrategy
         }
         //===================Идем искать зелья========================
 
+        //todo Не стоим. Идем по спирали
         $this->actionTypeForMyUnitsFoot[$unit->id] = MyAction::STAY;
         if (!is_null($this->debugInterface)){$this->debugInterface->add(new PlacedText(new Vec2($unit->position->x + 2, $unit->position->y + 2), "Стою на месте", new Vec2(0, 0), 0.5, $this->MC->blue1));}
         return $this->goToPosition($unit, $unit->position);
@@ -352,6 +386,14 @@ class MyStrategy
 
     private function eyeController(Game $game, Unit $unit): Vec2
     {
+        //===================Первый осмотр территории========================
+        if($game->currentTick < 40){
+            $this->actionTypeForMyUnitsEye[$unit->id] = MyAction::LOOK_AROUND_FIRST;
+            if (!is_null($this->debugInterface)){$this->debugInterface->add(new PlacedText(new Vec2($unit->position->x + 2, $unit->position->y + 1), "Первый осмотр территории", new Vec2(0, 0), 0.5, $this->MC->red1));}
+            return new Vec2($unit->direction->y, -$unit->direction->x);
+        }
+        //===================Первый осмотр территории========================
+
         //===================Смотрю вперед когда уворачиваюсь от пуль========================
         if ((isset($this->actionTypeForMyUnitsFoot[$unit->id]) && $this->actionTypeForMyUnitsFoot[$unit->id] == MyAction::TRY_TO_MISS_BULLET) && isset($this->actionForMyUnitsFoot[$unit->id])){
             $this->actionTypeForMyUnitsEye[$unit->id] = MyAction::LOOK_AT_UNIT_FORWARD_WHILE_MISS_BULLET;
@@ -360,15 +402,19 @@ class MyStrategy
         }
         //===================Смотрю вперед когда уворачиваюсь от пуль========================
 
-        //===================Осмотреться по таймеру========================
-        if (($game->currentTick / $this->constants->ticksPerSecond) % 10 == 0) {
-            $targetPosition = new Vec2($unit->direction->y, -$unit->direction->x);
-            $this->actionForMyUnitsEye[$unit->id] = $targetPosition;
-            $this->actionTypeForMyUnitsEye[$unit->id] = MyAction::LOOK_AROUND_BY_TIMER;
-            if (!is_null($this->debugInterface)){$this->debugInterface->add(new PlacedText(new Vec2($unit->position->x + 2, $unit->position->y + 1), "Осмотреться по таймеру", new Vec2(0, 0), 0.5, $this->MC->red1));}
-            return $targetPosition;
+        //===================Смотрю на звук шагов========================
+        //если нет таргета или таргет есть но дистанция до звука ближе чем до таргета
+        //Если есть звук И (нет таргета ИЛИ есть таргет дальше чем звук)
+        if (!empty($this->soundsSteps)){
+            $soundStep = $this->soundsSteps[count($this->soundsSteps)-1];
+            if (!isset($this->targetEnemyForMyUnits[$unit->id]) || (isset($this->targetEnemyForMyUnits[$unit->id]) && Helper::getDistance($unit->position, $this->targetEnemyForMyUnits[$unit->id]->position) > 100 && Helper::getDistance($unit->position, $this->targetEnemyForMyUnits[$unit->id]->position) > Helper::getDistance($unit->position, $soundStep->sound->position))){
+                $this->actionTypeForMyUnitsEye[$unit->id] = MyAction::LOOK_SOUND_STEPS;
+                if (!is_null($this->debugInterface)){$this->debugInterface->add(new PlacedText(new Vec2($unit->position->x + 2, $unit->position->y + 1), "Смотрю на звук шагов", new Vec2(0, 0), 0.5, $this->MC->red1));}
+                if (!is_null($this->debugInterface)){$this->debugInterface->add(new PolyLine([$unit->position, $soundStep->sound->position], 0.1, $this->MC->red05));}
+                return Helper::getVectorAB($unit->position, $soundStep->sound->position);
+            }
         }
-        //===================Осмотреться по таймеру========================
+        //===================Смотрю на звук шагов========================
 
         //===================Смотрю на target========================
         if (isset($this->targetEnemyForMyUnits[$unit->id])) {
@@ -384,7 +430,30 @@ class MyStrategy
             if (!is_null($this->debugInterface)){$this->debugInterface->add(new PolyLine([$unit->position, $targetForMyUnit], 0.1, $this->MC->red05));}
             return Helper::getVectorAB($unit->position, $targetForMyUnit);
         }
-        //===================Cмотрю на target========================
+        //===================Смотрю на target========================
+
+        //===================Смотрю на звук выстрелов========================
+        if (!empty($this->soundsPistolShoot) || !empty($this->soundsGunShoot) || !empty($this->soundsSniperShoot)){
+            $soundShoot = null;
+            if (is_null($soundShoot) && !empty($this->soundsPistolShoot)) $soundShoot = $this->soundsPistolShoot[count($this->soundsPistolShoot)-1];
+            if (is_null($soundShoot) && !empty($this->soundsGunShoot)) $soundShoot = $this->soundsGunShoot[count($this->soundsGunShoot)-1];
+            if (is_null($soundShoot) && !empty($this->soundsSniperShoot)) $soundShoot = $this->soundsSniperShoot[count($this->soundsSniperShoot)-1];
+            $this->actionTypeForMyUnitsEye[$unit->id] = MyAction::LOOK_SOUND_SHOOT;
+            if (!is_null($this->debugInterface)){$this->debugInterface->add(new PlacedText(new Vec2($unit->position->x + 2, $unit->position->y + 1), "Смотрю на звук выстрелов", new Vec2(0, 0), 0.5, $this->MC->red1));}
+            if (!is_null($this->debugInterface)){$this->debugInterface->add(new PolyLine([$unit->position, $soundShoot->sound->position], 0.1, $this->MC->red05));}
+            return Helper::getVectorAB($unit->position, $soundShoot->sound->position);
+        }
+        //===================Смотрю на звук выстрелов========================
+
+        //===================Осмотреться по таймеру========================
+        if (($game->currentTick / $this->constants->ticksPerSecond) % 10 == 0) {
+            $targetPosition = new Vec2($unit->direction->y, -$unit->direction->x);
+            $this->actionForMyUnitsEye[$unit->id] = $targetPosition;
+            $this->actionTypeForMyUnitsEye[$unit->id] = MyAction::LOOK_AROUND_BY_TIMER;
+            if (!is_null($this->debugInterface)){$this->debugInterface->add(new PlacedText(new Vec2($unit->position->x + 2, $unit->position->y + 1), "Осмотреться по таймеру", new Vec2(0, 0), 0.5, $this->MC->red1));}
+            return $targetPosition;
+        }
+        //===================Осмотреться по таймеру========================
 
         //===================Смотрю по ходу движения========================
         if (isset($this->actionForMyUnitsFoot[$unit->id])){
@@ -394,11 +463,11 @@ class MyStrategy
         }
         //===================Смотрю по ходу движения========================
 
-        //===================Смотрю по куругу========================
+        //===================Смотрю по кругу========================
         $this->actionTypeForMyUnitsEye[$unit->id] = MyAction::LOOK_AROUND;
         if (!is_null($this->debugInterface)){$this->debugInterface->add(new PlacedText(new Vec2($unit->position->x + 2, $unit->position->y + 1), "Смотрю по куругу", new Vec2(0, 0), 0.5, $this->MC->red1));}
         return new Vec2($unit->direction->y, -$unit->direction->x);
-        //===================Смотрю по куругу========================
+        //===================Смотрю по кругу========================
     }
 
     private function actionController(Game $game, Unit $unit): ActionOrder
@@ -447,7 +516,7 @@ class MyStrategy
         }
 
         //Стреляем по таргет юниту
-        if ((isset($this->targetEnemyForMyUnits[$unit->id]) && isset($this->actionForMyUnitsEye[$unit->id]) && $this->actionForMyUnitsEye[$unit->id] == MyAction::LOOK_AT_TARGET_ENEMY) && Helper::getDistance($unit->position, $this->targetEnemyForMyUnits[$unit->id]->position) < 500) {
+        if ((isset($this->targetEnemyForMyUnits[$unit->id]) && isset($this->actionTypeForMyUnitsEye[$unit->id]) && $this->actionTypeForMyUnitsEye[$unit->id] == MyAction::LOOK_AT_TARGET_ENEMY) && Helper::getDistance($unit->position, $this->targetEnemyForMyUnits[$unit->id]->position) < 500) {
             $this->actionTypeForMyUnitsAction[$unit->id] = MyAction::SHOOT_TO_TARGET_ENEMY;
             if (!is_null($this->debugInterface)){$this->debugInterface->add(new PlacedText(new Vec2($unit->position->x + 2, $unit->position->y), "Стреляю в targetEnemy", new Vec2(0, 0), 0.5, $this->MC->green1));}
             return new Aim(true);
@@ -547,7 +616,6 @@ class MyStrategy
     private function defineLootMap(Game $game): void
     {
         //todo удалять hitorypot если его нет.
-        //TODO ОСМОТРЕТЬСЯ ЕСЛИ РЯДОМ БЫЛ ЗВУК
         //держать дистанцию
 
         $this->visibleWeapon = [];
@@ -591,6 +659,81 @@ class MyStrategy
         foreach ($projectiles as $projectile) {
             if ($projectile->shooterPlayerId != $game->myId) {
                 $this->projectiles[$projectile->id] = $projectile;
+            }
+        }
+    }
+
+    private function defineSoundsMap(Game $game): void
+    {
+        /** @var Sound[] $sounds */
+        $sounds = $game->sounds;
+        foreach ($sounds as $sound) {
+            switch ($sound->typeIndex){
+                case MySound::STEPS:        $this->soundsSteps[] = new MySound($sound, $game->currentTick);; break;
+                case MySound::PISTOL_SOOT:  $this->soundsPistolShoot[] = new MySound($sound, $game->currentTick); break;
+                case MySound::PISTOL_HIT:   $this->soundsPistolHit[] = new MySound($sound, $game->currentTick); break;
+                case MySound::GUN_SOOT:     $this->soundsGunShoot[] = new MySound($sound, $game->currentTick); break;
+                case MySound::GUN_HIT:      $this->soundsGunHit[] = new MySound($sound, $game->currentTick); break;
+                case MySound::SNIPER_SOOT:  $this->soundsSniperShoot[] = new MySound($sound, $game->currentTick); break;
+                case MySound::SNIPER_HIT:   $this->soundsSniperHit[] = new MySound($sound, $game->currentTick); break;
+            }
+        }
+
+        //удаляем устаревшие звуки
+        foreach ($this->soundsSteps as $soundIndex => $mySound) {
+            if ($mySound->tick < $game->currentTick - self::CNT_TICK_SAVE_SOUND){
+                unset($this->soundsSteps[$soundIndex]);
+                $this->soundsSteps = array_values($this->soundsSteps);
+            } else {
+                if (!is_null($this->debugInterface)){$this->debugInterface->add(new Circle($mySound->sound->position, $this->constants->unitRadius*2, $this->MC->orange01));} //Рисуем примерную позицию звука
+            }
+        }
+        foreach ($this->soundsPistolShoot as $soundIndex => $mySound) {
+            if ($mySound->tick < $game->currentTick - self::CNT_TICK_SAVE_SOUND){
+                unset($this->soundsPistolShoot[$soundIndex]);
+                $this->soundsPistolShoot = array_values($this->soundsPistolShoot);
+            } else {
+                if (!is_null($this->debugInterface)){$this->debugInterface->add(new Circle($mySound->sound->position, $this->constants->unitRadius*2, $this->MC->lightGreen01));} //Рисуем примерную позицию звука
+            }
+        }
+        foreach ($this->soundsPistolHit as $soundIndex => $mySound) {
+            if ($mySound->tick < $game->currentTick - self::CNT_TICK_SAVE_SOUND){
+                unset($this->soundsPistolHit[$soundIndex]);
+                $this->soundsPistolHit = array_values($this->soundsPistolHit);
+            } else {
+                if (!is_null($this->debugInterface)){$this->debugInterface->add(new Circle($mySound->sound->position, $this->constants->unitRadius*2, $this->MC->lightGreen01));} //Рисуем примерную позицию звука
+            }
+        }
+        foreach ($this->soundsGunShoot as $soundIndex => $mySound) {
+            if ($mySound->tick < $game->currentTick - self::CNT_TICK_SAVE_SOUND){
+                unset($this->soundsGunShoot[$soundIndex]);
+                $this->soundsGunShoot = array_values($this->soundsGunShoot);
+            } else {
+                if (!is_null($this->debugInterface)){$this->debugInterface->add(new Circle($mySound->sound->position, $this->constants->unitRadius*2, $this->MC->lightBlue01));} //Рисуем примерную позицию звука
+            }
+        }
+        foreach ($this->soundsGunHit as $soundIndex => $mySound) {
+            if ($mySound->tick < $game->currentTick - self::CNT_TICK_SAVE_SOUND){
+                unset($this->soundsGunHit[$soundIndex]);
+                $this->soundsGunHit = array_values($this->soundsGunHit);
+            } else {
+                if (!is_null($this->debugInterface)){$this->debugInterface->add(new Circle($mySound->sound->position, $this->constants->unitRadius*2, $this->MC->lightBlue01));} //Рисуем примерную позицию звука
+            }
+        }
+        foreach ($this->soundsSniperShoot as $soundIndex => $mySound) {
+            if ($mySound->tick < $game->currentTick - self::CNT_TICK_SAVE_SOUND){
+                unset($this->soundsSniperShoot[$soundIndex]);
+                $this->soundsSniperShoot = array_values($this->soundsSniperShoot);
+            } else {
+                if (!is_null($this->debugInterface)){$this->debugInterface->add(new Circle($mySound->sound->position, $this->constants->unitRadius*2, $this->MC->lightRed01));} //Рисуем примерную позицию звука
+            }
+        }
+        foreach ($this->soundsSniperHit as $soundIndex => $mySound) {
+            if ($mySound->tick < $game->currentTick - self::CNT_TICK_SAVE_SOUND){
+                unset($this->soundsSniperHit[$soundIndex]);
+                $this->soundsSniperHit = array_values($this->soundsSniperHit);
+            } else {
+                if (!is_null($this->debugInterface)){$this->debugInterface->add(new Circle($mySound->sound->position, $this->constants->unitRadius*2, $this->MC->lightRed01));} //Рисуем примерную позицию звука
             }
         }
     }
@@ -918,9 +1061,9 @@ class Helper
 }
 
 class MyWeapon {
-    const PISTOL = 0;
-    const GUN = 1;
-    const SNIPER = 2;
+    const PISTOL = 0;   //MagicWand
+    const GUN = 1;      //Staff
+    const SNIPER = 2;   //Bow
 
     public static function getName(int $weaponId): string
     {
@@ -930,6 +1073,26 @@ class MyWeapon {
             case self::SNIPER: return "Sniper";
             default: return "Undefined";
         }
+    }
+}
+
+class MySound{
+
+    const STEPS = 0;        //Ораньжевый
+    const PISTOL_SOOT = 1;  //Зеленый
+    const GUN_SOOT = 2;     //Синий
+    const SNIPER_SOOT = 3;  //Красный
+    const PISTOL_HIT = 4;   //Зеленый
+    const GUN_HIT = 5;      //Синий
+    const SNIPER_HIT = 6;   //Красный
+
+    public Sound $sound;
+    public int $tick;
+
+    public function __construct(Sound $sound, $tick)
+    {
+        $this->sound = $sound;
+        $this->tick = $tick;
     }
 }
 
@@ -943,9 +1106,12 @@ class MyAction {
 
     const LOOK_AROUND_BY_TIMER = 70;
     const LOOK_AT_TARGET_ENEMY = 80;
+    const LOOK_AROUND_FIRST = 89;
     const LOOK_AROUND = 90;
     const LOOK_AT_UNIT_FORWARD = 91;
     const LOOK_AT_UNIT_FORWARD_WHILE_MISS_BULLET = 92;
+    const LOOK_SOUND_STEPS = 93;
+    const LOOK_SOUND_SHOOT = 94;
 
     const TRY_TO_MISS_BULLET = 100;
     const GO_OUT_FROM_GREY_ZONE = 110;
@@ -957,6 +1123,8 @@ class MyAction {
 
 
 class MyColor {
+    public Color $lightBlue01;
+
     public Color $blue01;
     public Color $blue05;
     public Color $blue1;
@@ -977,6 +1145,8 @@ class MyColor {
     public Color $white05;
     public Color $white1;
 
+    public Color $lightRed01;
+
     public Color $red01;
     public Color $red05;
     public Color $red1;
@@ -985,8 +1155,14 @@ class MyColor {
     public Color $aqua05;
     public Color $aqua1;
 
+    public Color $orange01;
+    public Color $orange05;
+    public Color $orange1;
+
     public function __construct()
     {
+        $this->lightBlue01 = new Color(0, 0, 50, 0.1);
+
         $this->blue01 = new Color(0, 0, 255, 0.1);
         $this->blue05 = new Color(0, 0, 255, 0.5);
         $this->blue1 = new Color(0, 0, 255, 1);
@@ -1007,6 +1183,8 @@ class MyColor {
         $this->white05 = new Color(255, 255, 255, 0.5);
         $this->white1 = new Color(255, 255, 255, 1);
 
+        $this->lightRed01 = new Color(50, 0, 0, 0.1);
+
         $this->red01 = new Color(255, 0, 0, 0.1);
         $this->red05 = new Color(255, 0, 0, 0.5);
         $this->red1 = new Color(255, 0, 0, 1);
@@ -1014,5 +1192,9 @@ class MyColor {
         $this->aqua01 = new Color(0, 255, 255, 0.1);
         $this->aqua05 = new Color(0, 255, 255, 0.5);
         $this->aqua1 = new Color(0, 255, 255, 1);
+
+        $this->orange01 = new Color(255, 102, 0, 0.1);
+        $this->orange05 = new Color(255, 102, 0, 0.5);
+        $this->orange1 = new Color(255, 102, 0, 1);
     }
 }
