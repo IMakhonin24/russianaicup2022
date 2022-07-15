@@ -2,95 +2,130 @@
 
 use Debugging\Color;
 
-class MyColor {
-    public Color $lightBlue01;
+class MyColor
+{
+    const LIGHT_BLUE_01 = 100;
 
-    public Color $blue01;
-    public Color $blue05;
-    public Color $blue1;
+    const BLUE_01 = 150;
+    const BLUE_05 = 160;
+    const BLUE_1 = 170;
 
-    public Color $black01;
-    public Color $black02;
-    public Color $black05;
-    public Color $black1;
+    const BLACK_01 = 200;
+    const BLACK_02 = 210;
+    const BLACK_05 = 220;
+    const BLACK_1 = 230;
 
-    public Color $lightGreen01;
+    const LIGHT_GREEN_01 = 250;
 
-    public Color $green01;
-    public Color $green02;
-    public Color $green05;
-    public Color $green1;
+    const GREEN_01 = 300;
+    const GREEN_02 = 310;
+    const GREEN_05 = 320;
+    const GREEN_1 = 330;
 
-    public Color $white01;
-    public Color $white05;
-    public Color $white1;
+    const WHITE_01 = 350;
+    const WHITE_05 = 360;
+    const WHITE_1 = 370;
 
-    public Color $lightRed01;
+    const LIGHT_RED_01 = 400;
 
-    public Color $red01;
-    public Color $red05;
-    public Color $red1;
+    const RED_01 = 450;
+    const RED_05 = 460;
+    const RED_1 = 470;
 
-    public Color $aqua01;
-    public Color $aqua05;
-    public Color $aqua1;
+    const AQUA_01 = 500;
+    const AQUA_05 = 510;
+    const AQUA_1 = 520;
 
-    public Color $orange01;
-    public Color $orange05;
-    public Color $orange1;
+    const ORANGE_01 = 550;
+    const ORANGE_05 = 560;
+    const ORANGE_1 = 570;
 
-    public Color $violet01;
-    public Color $violet05;
-    public Color $violet1;
+    const VIOLET_01 = 600;
+    const VIOLET_05 = 610;
+    const VIOLET_1 = 620;
 
-    public Color $yellow01;
-    public Color $yellow05;
-    public Color $yellow1;
+    const YELLOW_01 = 650;
+    const YELLOW_05 = 660;
+    const YELLOW_1 = 670;
 
-    public function __construct()
+    public static function getColor(int $colorId): Color
     {
-        $this->lightBlue01 = new Color(0, 0, 50, 0.1);
+        switch ($colorId) {
+            case self::LIGHT_BLUE_01 :
+                return new Color(0, 0, 50, 0.1);
 
-        $this->blue01 = new Color(0, 0, 255, 0.1);
-        $this->blue05 = new Color(0, 0, 255, 0.5);
-        $this->blue1 = new Color(0, 0, 255, 1);
+            case self::BLUE_01 :
+                return new Color(0, 0, 255, 0.1);
+            case self::BLUE_05 :
+                return new Color(0, 0, 255, 0.5);
+            case self::BLUE_1 :
+                return new Color(0, 0, 255, 1);
 
-        $this->black01 = new Color(0, 0, 0, 0.1);
-        $this->black02 = new Color(0, 0, 0, 0.2);
-        $this->black05 = new Color(0, 0, 0, 0.5);
-        $this->black1 = new Color(0, 0, 0, 1);
+            case self::BLACK_01 :
+                return new Color(0, 0, 0, 0.1);
+            case self::BLACK_02 :
+                return new Color(0, 0, 0, 0.2);
+            case self::BLACK_05 :
+                return new Color(0, 0, 0, 0.5);
+            case self::BLACK_1 :
+                return new Color(0, 0, 0, 1);
 
-        $this->lightGreen01 = new Color(0, 50, 0, 0.1);
+            case self::LIGHT_GREEN_01 :
+                return new Color(0, 50, 0, 0.1);
 
-        $this->green01 = new Color(0, 255, 0, 0.1);
-        $this->green02 = new Color(0, 255, 0, 0.2);
-        $this->green05 = new Color(0, 255, 0, 0.5);
-        $this->green1 = new Color(0, 255, 0, 1);
+            case self::GREEN_01 :
+                return new Color(0, 255, 0, 0.1);
+            case self::GREEN_02 :
+                return new Color(0, 255, 0, 0.2);
+            case self::GREEN_05 :
+                return new Color(0, 255, 0, 0.5);
+            case self::GREEN_1 :
+                return new Color(0, 255, 0, 1);
 
-        $this->white01 = new Color(255, 255, 255, 0.1);
-        $this->white05 = new Color(255, 255, 255, 0.5);
-        $this->white1 = new Color(255, 255, 255, 1);
+            case self::WHITE_01 :
+                return new Color(255, 255, 255, 0.1);
+            case self::WHITE_05 :
+                return new Color(255, 255, 255, 0.5);
+            case self::WHITE_1 :
+                return new Color(255, 255, 255, 1);
 
-        $this->lightRed01 = new Color(50, 0, 0, 0.1);
+            case self::LIGHT_RED_01 :
+                return new Color(50, 0, 0, 0.1);
 
-        $this->red01 = new Color(255, 0, 0, 0.1);
-        $this->red05 = new Color(255, 0, 0, 0.5);
-        $this->red1 = new Color(255, 0, 0, 1);
+            case self::RED_01 :
+                return new Color(255, 0, 0, 0.1);
+            case self::RED_05 :
+                return new Color(255, 0, 0, 0.5);
+            case self::RED_1 :
+                return new Color(255, 0, 0, 1);
 
-        $this->aqua01 = new Color(0, 255, 255, 0.1);
-        $this->aqua05 = new Color(0, 255, 255, 0.5);
-        $this->aqua1 = new Color(0, 255, 255, 1);
+            case self::AQUA_01 :
+                return new Color(0, 255, 255, 0.1);
+            case self::AQUA_05 :
+                return new Color(0, 255, 255, 0.5);
+            case self::AQUA_1 :
+                return new Color(0, 255, 255, 1);
 
-        $this->orange01 = new Color(255, 102, 0, 0.1);
-        $this->orange05 = new Color(255, 102, 0, 0.5);
-        $this->orange1 = new Color(255, 102, 0, 1);
+            case self::ORANGE_01 :
+                return new Color(255, 102, 0, 0.1);
+            case self::ORANGE_05 :
+                return new Color(255, 102, 0, 0.5);
+            case self::ORANGE_1 :
+                return new Color(255, 102, 0, 1);
 
-        $this->violet01 = new Color(128, 0, 255, 0.1);
-        $this->violet05 = new Color(128, 0, 255, 0.5);
-        $this->violet1 = new Color(128, 0, 255, 1);
+            case self::VIOLET_01 :
+                return new Color(128, 0, 255, 0.1);
+            case self::VIOLET_05 :
+                return new Color(128, 0, 255, 0.5);
+            case self::VIOLET_1 :
+                return new Color(128, 0, 255, 1);
 
-        $this->yellow01 = new Color(255, 255, 0, 0.1);
-        $this->yellow05 = new Color(255, 255, 0, 0.5);
-        $this->yellow1 = new Color(255, 255, 0, 1);
+            case self::YELLOW_01 :
+                return new Color(255, 255, 0, 0.1);
+            case self::YELLOW_05 :
+                return new Color(255, 255, 0, 0.5);
+            case self::YELLOW_1 :
+                return new Color(255, 255, 0, 1);
+        }
     }
 }

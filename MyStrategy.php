@@ -14,7 +14,6 @@ use Model\Item\Ammo;
 use Model\Item\ShieldPotions;
 use Model\Item\Weapon;
 use Model\Loot;
-use Model\Obstacle;
 use Model\Order;
 use Model\Projectile;
 use Model\Sound;
@@ -28,6 +27,7 @@ require_once 'Model/Constants.php';
 
 require_once 'My/MyColor.php';
 require_once 'My/Helper.php';
+require_once 'My/MyObstacles.php';
 
 class MyStrategy
 {
@@ -37,7 +37,8 @@ class MyStrategy
 
     private Constants $constants;
     private Game $game;
-    private MyColor $MC;
+
+    private MyObstacles $myObstacles;
 
     /**
      * @var array | Unit[]
@@ -109,11 +110,6 @@ class MyStrategy
     private array $projectiles; //Массив пуль
 
     /**
-     * @var array | Obstacle[]
-     */
-    private array $obstacles; //Массив препятствий
-
-    /**
      * @var array | MySound[]
      */
     private array $soundsSteps = []; //Массив звуков шагов
@@ -165,9 +161,7 @@ class MyStrategy
     function __construct(Constants $constants)
     {
         $this->constants = $constants;
-        $this->MC = new MyColor();
-
-        $this->defineObstaclesMap($constants);
+        $this->myObstacles = new MyObstacles($constants);
     }
 
     private function init(Game $game): void
@@ -199,7 +193,7 @@ class MyStrategy
         $this->defineNearestWeaponForMyUnit($unit);
         $this->defineNearestPotForMyUnit($unit);
         $this->defineNearestAmmoForMyUnit($unit);
-        $this->defineNearestObstaclesMyUnit($unit);
+        $this->myObstacles->defineNearestObstaclesMyUnit($unit);
 
         //cnt in personal area
         foreach ($this->historyEnemies as $historyEnemy) {
@@ -214,8 +208,12 @@ class MyStrategy
         }
     }
 
+
+
     function getOrder(Game $game, ?DebugInterface $debugInterface): Order
     {
+        $this->setCommonData($game, $debugInterface);
+
         $this->debugInterface = $debugInterface;
         $this->game = $game;
         $this->init($game);
@@ -226,7 +224,7 @@ class MyStrategy
             $this->debugInterface->add(new Circle(
                 $game->zone->currentCenter,
                 $game->zone->currentRadius - 25,
-                $this->MC->lightGreen01
+                MyColor::getColor(MyColor::LIGHT_GREEN_01)
             ));
         }
 
@@ -241,17 +239,22 @@ class MyStrategy
 
             //Вывожу параметры юнитов
             foreach ($unit->ammo as $ammoType => $ammoCnt) {
-                if (!is_null($this->debugInterface)){$this->debugInterface->add(new PlacedText(new Vec2($unit->position->x - 4, $unit->position->y + 2 + ($ammoType * -0.3)), "Ammo[".$ammoType."] = ".$ammoCnt, new Vec2(0, 0), 0.3, $this->MC->blue1));}
+                if (!is_null($this->debugInterface)){$this->debugInterface->add(new PlacedText(new Vec2($unit->position->x - 4, $unit->position->y + 2 + ($ammoType * -0.3)), "Ammo[".$ammoType."] = ".$ammoCnt, new Vec2(0, 0), 0.3, MyColor::getColor(MyColor::BLUE_1)));}
             }
-            if (!is_null($this->debugInterface)){$this->debugInterface->add(new PlacedText(new Vec2($unit->position->x - 4, $unit->position->y + 1), "Weapon: " . MyWeapon::getName($unit->weapon), new Vec2(0, 0), 0.3, $this->MC->blue1));}
-            if (!is_null($this->debugInterface)){$this->debugInterface->add(new PlacedText(new Vec2($unit->position->x - 4, $unit->position->y+0.6), "Pots: " . $unit->shieldPotions . "/" .$this->constants->maxShieldPotionsInInventory, new Vec2(0, 0), 0.3, $this->MC->blue1));}
-            if (!is_null($this->debugInterface)){$this->debugInterface->add(new PlacedText(new Vec2($unit->position->x - 4, $unit->position->y-1.3), "DistanceToTargetEnemy: ".(isset($this->targetEnemyForMyUnits[$unit->id])?Helper::getDistance($unit->position, $this->targetEnemyForMyUnits[$unit->id]->position) : 'null'), new Vec2(0, 0), 0.3, $this->MC->blue1));}
-            if (!is_null($this->debugInterface)){$this->debugInterface->add(new PlacedText(new Vec2($unit->position->x - 4, $unit->position->y-1.6), "Velocity: (". (int)$unit->velocity->x.";".(int)$unit->velocity->y.") = ".(int)Helper::getDistance($unit->position,new Vec2($unit->position->x + $unit->velocity->x,$unit->position->y + $unit->velocity->y)), new Vec2(0, 0), 0.3, $this->MC->blue1));}
-            if (!is_null($this->debugInterface)){$this->debugInterface->add(new PlacedText(new Vec2($unit->position->x - 4, $unit->position->y+0.2), "In person area: ". count($this->enemyInPersonalAreaForMyUnits[$unit->id]), new Vec2(0, 0), 0.3, $this->MC->blue1));}
-            if (!is_null($this->debugInterface)){$this->debugInterface->add(new Circle($unit->position, $this->constants->unitRadius * self::COEFFICIENT_PERSONAL_AREA, $this->MC->yellow01));}//PersonalArea Circle
+            if (!is_null($this->debugInterface)){$this->debugInterface->add(new PlacedText(new Vec2($unit->position->x - 4, $unit->position->y + 1), "Weapon: " . MyWeapon::getName($unit->weapon), new Vec2(0, 0), 0.3, MyColor::getColor(MyColor::BLUE_1)));}
+            if (!is_null($this->debugInterface)){$this->debugInterface->add(new PlacedText(new Vec2($unit->position->x - 4, $unit->position->y+0.6), "Pots: " . $unit->shieldPotions . "/" .$this->constants->maxShieldPotionsInInventory, new Vec2(0, 0), 0.3, MyColor::getColor(MyColor::BLUE_1)));}
+            if (!is_null($this->debugInterface)){$this->debugInterface->add(new PlacedText(new Vec2($unit->position->x - 4, $unit->position->y-1.3), "DistanceToTargetEnemy: ".(isset($this->targetEnemyForMyUnits[$unit->id])?Helper::getDistance($unit->position, $this->targetEnemyForMyUnits[$unit->id]->position) : 'null'), new Vec2(0, 0), 0.3, MyColor::getColor(MyColor::BLUE_1)));}
+            if (!is_null($this->debugInterface)){$this->debugInterface->add(new PlacedText(new Vec2($unit->position->x - 4, $unit->position->y-1.6), "Velocity: (". (int)$unit->velocity->x.";".(int)$unit->velocity->y.") = ".(int)Helper::getDistance($unit->position,new Vec2($unit->position->x + $unit->velocity->x,$unit->position->y + $unit->velocity->y)), new Vec2(0, 0), 0.3, MyColor::getColor(MyColor::BLUE_1)));}
+            if (!is_null($this->debugInterface)){$this->debugInterface->add(new PlacedText(new Vec2($unit->position->x - 4, $unit->position->y+0.2), "In person area: ". count($this->enemyInPersonalAreaForMyUnits[$unit->id]), new Vec2(0, 0), 0.3, MyColor::getColor(MyColor::BLUE_1)));}
+            if (!is_null($this->debugInterface)){$this->debugInterface->add(new Circle($unit->position, $this->constants->unitRadius * self::COEFFICIENT_PERSONAL_AREA, MyColor::getColor(MyColor::YELLOW_01)));}//PersonalArea Circle
         }
 
         return new Order($order);
+    }
+
+    private function setCommonData(Game $game, ?DebugInterface $debugInterface): void
+    {
+        $this->myObstacles->setCommonData($game, $debugInterface);
     }
 
     private function footController(Game $game, Unit $unit): Vec2
@@ -271,13 +274,13 @@ class MyStrategy
             $this->debugInterface->add(new Circle(
                 $unit->position,
                 $userFictiveRadius,
-                $this->MC->green02
+                MyColor::getColor(MyColor::GREEN_02)
             ));
         }
 
         foreach ($this->projectiles as $projectile) {
             if (Helper::isIntersectionLineAndCircle($projectile->position, new Vec2($projectile->position->x + $projectile->velocity->x, $projectile->position->y + $projectile->velocity->y), $unit->position, $userFictiveRadius)) {
-                if (!is_null($this->debugInterface)){$this->debugInterface->add(new PolyLine([$projectile->position, new Vec2($projectile->position->x + $projectile->velocity->x, $projectile->position->y + $projectile->velocity->y)], 0.1, $this->MC->black02));}
+                if (!is_null($this->debugInterface)){$this->debugInterface->add(new PolyLine([$projectile->position, new Vec2($projectile->position->x + $projectile->velocity->x, $projectile->position->y + $projectile->velocity->y)], 0.1, MyColor::getColor(MyColor::BLACK_02)));}
 
                 $lineA = $projectile->position;
                 $lineB = new Vec2($projectile->position->x + $projectile->velocity->x, $projectile->position->y + $projectile->velocity->y);
@@ -313,7 +316,7 @@ class MyStrategy
                 }
             } else {
                 //просто рисуем все пули
-                if (!is_null($this->debugInterface)){$this->debugInterface->add(new PolyLine([$projectile->position, new Vec2($projectile->position->x + $projectile->velocity->x, $projectile->position->y + $projectile->velocity->y)], 0.1, $this->MC->white01));}
+                if (!is_null($this->debugInterface)){$this->debugInterface->add(new PolyLine([$projectile->position, new Vec2($projectile->position->x + $projectile->velocity->x, $projectile->position->y + $projectile->velocity->y)], 0.1, MyColor::getColor(MyColor::WHITE_01)));}
             }
         }
 
@@ -371,8 +374,8 @@ class MyStrategy
             }
             $position = ($numberHit1 >= $numberHit2) ? $nextUnitPosition2 : $nextUnitPosition1;
             $this->actionTypeForMyUnitsFoot[$unit->id] = MyAction::TRY_TO_MISS_BULLET;
-            if (!is_null($this->debugInterface)){$this->debugInterface->add(new PolyLine([$unit->position, $position], 0.1, $this->MC->blue05));}
-            if (!is_null($this->debugInterface)){$this->debugInterface->add(new PlacedText(new Vec2($unit->position->x + 2, $unit->position->y + 2), "Увороты", new Vec2(0, 0), 0.5, $this->MC->blue1));}
+            if (!is_null($this->debugInterface)){$this->debugInterface->add(new PolyLine([$unit->position, $position], 0.1, MyColor::getColor(MyColor::BLUE_05)));}
+            if (!is_null($this->debugInterface)){$this->debugInterface->add(new PlacedText(new Vec2($unit->position->x + 2, $unit->position->y + 2), "Увороты", new Vec2(0, 0), 0.5, MyColor::getColor(MyColor::BLUE_1)));}
             return $this->goToPosition($unit, $position);
         }
         //===================Увороты========================
@@ -381,7 +384,7 @@ class MyStrategy
         //===================Уходим от зоны========================
         if (!Helper::isPointInCircle($game->zone->currentCenter, $game->zone->currentRadius - 25, $unit->position)) {
             $this->actionTypeForMyUnitsFoot[$unit->id] = MyAction::GO_OUT_FROM_GREY_ZONE;
-            if (!is_null($this->debugInterface)){$this->debugInterface->add(new PlacedText(new Vec2($unit->position->x + 2, $unit->position->y + 2), "Ухожу из серой зоны", new Vec2(0, 0), 0.5, $this->MC->blue1));}
+            if (!is_null($this->debugInterface)){$this->debugInterface->add(new PlacedText(new Vec2($unit->position->x + 2, $unit->position->y + 2), "Ухожу из серой зоны", new Vec2(0, 0), 0.5, MyColor::getColor(MyColor::BLUE_1)));}
             return $this->goToPosition($unit, new Vec2(0, 0));
         }
         //===================Уходим от зоны========================
@@ -391,13 +394,13 @@ class MyStrategy
             $positions = [];
             foreach ($this->enemyInPersonalAreaForMyUnits[$unit->id] as $enemyInPersonalAreaForMyUnit) {
                 $positions[] = $enemyInPersonalAreaForMyUnit->position;
-                if (!is_null($this->debugInterface)){$this->debugInterface->add(new PolyLine([$unit->position, $enemyInPersonalAreaForMyUnit->position], 0.3, $this->MC->red05));}
+                if (!is_null($this->debugInterface)){$this->debugInterface->add(new PolyLine([$unit->position, $enemyInPersonalAreaForMyUnit->position], 0.3, MyColor::getColor(MyColor::RED_05)));}
             }
 
             $goOutPosition = Helper::getAverageVectorFromOneCentre($unit->position, $positions);
             $this->actionTypeForMyUnitsFoot[$unit->id] = MyAction::GO_OUT_FROM_A_LOT_OF_UNIT;
-            if (!is_null($this->debugInterface)){$this->debugInterface->add(new PolyLine([$unit->position, $goOutPosition], 0.3, $this->MC->aqua05));}
-            if (!is_null($this->debugInterface)){$this->debugInterface->add(new PlacedText(new Vec2($unit->position->x + 2, $unit->position->y + 2), "Убегаю от толпы", new Vec2(0, 0), 0.5, $this->MC->blue1));}
+            if (!is_null($this->debugInterface)){$this->debugInterface->add(new PolyLine([$unit->position, $goOutPosition], 0.3, MyColor::getColor(MyColor::AQUA_05)));}
+            if (!is_null($this->debugInterface)){$this->debugInterface->add(new PlacedText(new Vec2($unit->position->x + 2, $unit->position->y + 2), "Убегаю от толпы", new Vec2(0, 0), 0.5, MyColor::getColor(MyColor::BLUE_1)));}
             return $this->goToPosition($unit, $goOutPosition);
         }
         //===================Убегаем от толпы========================
@@ -406,8 +409,8 @@ class MyStrategy
         if ($unit->weapon < MyWeapon::SNIPER && $unit->ammo[MyWeapon::SNIPER] > 0 && isset($this->nearestWeaponForMyUnits[$unit->id][MyWeapon::SNIPER])){
             $weaponSniper = $this->nearestWeaponForMyUnits[$unit->id][MyWeapon::SNIPER];
             $this->actionTypeForMyUnitsFoot[$unit->id] = MyAction::GO_TO_WEAPON_SNIPER;
-            if (!is_null($this->debugInterface)){$this->debugInterface->add(new PolyLine([$unit->position, $weaponSniper->position], 0.1, $this->MC->blue05));}
-            if (!is_null($this->debugInterface)){$this->debugInterface->add(new PlacedText(new Vec2($unit->position->x + 2, $unit->position->y + 2), "Иду к ближ. снайп. оруж.", new Vec2(0, 0), 0.5, $this->MC->blue1));}
+            if (!is_null($this->debugInterface)){$this->debugInterface->add(new PolyLine([$unit->position, $weaponSniper->position], 0.1, MyColor::getColor(MyColor::BLUE_05)));}
+            if (!is_null($this->debugInterface)){$this->debugInterface->add(new PlacedText(new Vec2($unit->position->x + 2, $unit->position->y + 2), "Иду к ближ. снайп. оруж.", new Vec2(0, 0), 0.5, MyColor::getColor(MyColor::BLUE_1)));}
             return $this->goToPosition($unit, $weaponSniper->position);
         }
         //===================Ищем снайперку========================
@@ -416,8 +419,8 @@ class MyStrategy
         if ($unit->ammo[MyWeapon::SNIPER] < 10 && isset($this->nearestAmmoForMyUnits[$unit->id][MyWeapon::SNIPER])){
             $weaponAmmoSniper = $this->nearestAmmoForMyUnits[$unit->id][MyWeapon::SNIPER];
             $this->actionTypeForMyUnitsFoot[$unit->id] = MyAction::GO_TO_AMMO_SNIPER;
-            if (!is_null($this->debugInterface)){$this->debugInterface->add(new PolyLine([$unit->position, $weaponAmmoSniper->position], 0.1, $this->MC->blue05));}
-            if (!is_null($this->debugInterface)){$this->debugInterface->add(new PlacedText(new Vec2($unit->position->x + 2, $unit->position->y + 2), "Иду к ближ. патрон. cнайп. оруж.", new Vec2(0, 0), 0.5, $this->MC->blue1));}
+            if (!is_null($this->debugInterface)){$this->debugInterface->add(new PolyLine([$unit->position, $weaponAmmoSniper->position], 0.1, MyColor::getColor(MyColor::BLUE_05)));}
+            if (!is_null($this->debugInterface)){$this->debugInterface->add(new PlacedText(new Vec2($unit->position->x + 2, $unit->position->y + 2), "Иду к ближ. патрон. cнайп. оруж.", new Vec2(0, 0), 0.5, MyColor::getColor(MyColor::BLUE_1)));}
             return $this->goToPosition($unit, $weaponAmmoSniper->position);
         }
         //===================Идем брать ближайшие патроны для снайперки========================
@@ -426,15 +429,15 @@ class MyStrategy
         if ($unit->shieldPotions < $this->constants->maxShieldPotionsInInventory && isset($this->nearestPotForMyUnits[$unit->id])) {
             $pot = $this->nearestPotForMyUnits[$unit->id];
             $this->actionTypeForMyUnitsFoot[$unit->id] = MyAction::GO_TO_POT;
-            if (!is_null($this->debugInterface)){$this->debugInterface->add(new PolyLine([$unit->position, $pot->position], 0.1, $this->MC->blue05));}
-            if (!is_null($this->debugInterface)){$this->debugInterface->add(new PlacedText(new Vec2($unit->position->x + 2, $unit->position->y + 2), "Иду к ближ. поту", new Vec2(0, 0), 0.5, $this->MC->blue1));}
+            if (!is_null($this->debugInterface)){$this->debugInterface->add(new PolyLine([$unit->position, $pot->position], 0.1, MyColor::getColor(MyColor::BLUE_05)));}
+            if (!is_null($this->debugInterface)){$this->debugInterface->add(new PlacedText(new Vec2($unit->position->x + 2, $unit->position->y + 2), "Иду к ближ. поту", new Vec2(0, 0), 0.5, MyColor::getColor(MyColor::BLUE_1)));}
             return $this->goToPosition($unit, $pot->position);
         }
         //===================Идем искать зелья========================
 
         //todo Не стоим. Идем по спирали
         $this->actionTypeForMyUnitsFoot[$unit->id] = MyAction::STAY;
-        if (!is_null($this->debugInterface)){$this->debugInterface->add(new PlacedText(new Vec2($unit->position->x + 2, $unit->position->y + 2), "Стою на месте", new Vec2(0, 0), 0.5, $this->MC->blue1));}
+        if (!is_null($this->debugInterface)){$this->debugInterface->add(new PlacedText(new Vec2($unit->position->x + 2, $unit->position->y + 2), "Стою на месте", new Vec2(0, 0), 0.5, MyColor::getColor(MyColor::BLUE_1)));}
         return $this->goToPosition($unit, $unit->position);
     }
 
@@ -443,7 +446,7 @@ class MyStrategy
         //===================Первый осмотр территории========================
         if($game->currentTick < 40){
             $this->actionTypeForMyUnitsEye[$unit->id] = MyAction::LOOK_AROUND_FIRST;
-            if (!is_null($this->debugInterface)){$this->debugInterface->add(new PlacedText(new Vec2($unit->position->x + 2, $unit->position->y + 1), "Первый осмотр территории", new Vec2(0, 0), 0.5, $this->MC->red1));}
+            if (!is_null($this->debugInterface)){$this->debugInterface->add(new PlacedText(new Vec2($unit->position->x + 2, $unit->position->y + 1), "Первый осмотр территории", new Vec2(0, 0), 0.5, MyColor::getColor(MyColor::RED_1)));}
             return new Vec2($unit->direction->y, -$unit->direction->x);
         }
         //===================Первый осмотр территории========================
@@ -451,7 +454,7 @@ class MyStrategy
         //===================Смотрю вперед когда уворачиваюсь от пуль========================
         if ((isset($this->actionTypeForMyUnitsFoot[$unit->id]) && $this->actionTypeForMyUnitsFoot[$unit->id] == MyAction::TRY_TO_MISS_BULLET) && isset($this->actionForMyUnitsFoot[$unit->id])){
             $this->actionTypeForMyUnitsEye[$unit->id] = MyAction::LOOK_AT_UNIT_FORWARD_WHILE_MISS_BULLET;
-            if (!is_null($this->debugInterface)){$this->debugInterface->add(new PlacedText(new Vec2($unit->position->x + 2, $unit->position->y + 1), "Смотрю по ходу движения во время уворотов", new Vec2(0, 0), 0.5, $this->MC->red1));}
+            if (!is_null($this->debugInterface)){$this->debugInterface->add(new PlacedText(new Vec2($unit->position->x + 2, $unit->position->y + 1), "Смотрю по ходу движения во время уворотов", new Vec2(0, 0), 0.5, MyColor::getColor(MyColor::RED_1)));}
             return Helper::getVectorAB($unit->position, $this->actionForMyUnitsFoot[$unit->id]);
         }
         //===================Смотрю вперед когда уворачиваюсь от пуль========================
@@ -463,8 +466,8 @@ class MyStrategy
             $soundStep = $this->soundsSteps[count($this->soundsSteps)-1];
             if (!isset($this->targetEnemyForMyUnits[$unit->id]) || (isset($this->targetEnemyForMyUnits[$unit->id]) && Helper::getDistance($unit->position, $this->targetEnemyForMyUnits[$unit->id]->position) > 100 && Helper::getDistance($unit->position, $this->targetEnemyForMyUnits[$unit->id]->position) > Helper::getDistance($unit->position, $soundStep->sound->position))){
                 $this->actionTypeForMyUnitsEye[$unit->id] = MyAction::LOOK_SOUND_STEPS;
-                if (!is_null($this->debugInterface)){$this->debugInterface->add(new PlacedText(new Vec2($unit->position->x + 2, $unit->position->y + 1), "Смотрю на звук шагов", new Vec2(0, 0), 0.5, $this->MC->red1));}
-                if (!is_null($this->debugInterface)){$this->debugInterface->add(new PolyLine([$unit->position, $soundStep->sound->position], 0.1, $this->MC->red05));}
+                if (!is_null($this->debugInterface)){$this->debugInterface->add(new PlacedText(new Vec2($unit->position->x + 2, $unit->position->y + 1), "Смотрю на звук шагов", new Vec2(0, 0), 0.5, MyColor::getColor(MyColor::RED_1)));}
+                if (!is_null($this->debugInterface)){$this->debugInterface->add(new PolyLine([$unit->position, $soundStep->sound->position], 0.1, MyColor::getColor(MyColor::RED_05)));}
                 return Helper::getVectorAB($unit->position, $soundStep->sound->position);
             }
         }
@@ -472,16 +475,16 @@ class MyStrategy
 
         //===================Смотрю на target========================
         if (isset($this->targetEnemyForMyUnits[$unit->id]) && $this->actionTypeForMyUnitsFoot[$unit->id] !== MyAction::GO_OUT_FROM_A_LOT_OF_UNIT) {
-            if (!is_null($this->debugInterface)){$this->debugInterface->add(new PlacedText(new Vec2($unit->position->x + 2, $unit->position->y + 1), "Смотрю на targetEnemy", new Vec2(0, 0), 0.5, $this->MC->red1));}
+            if (!is_null($this->debugInterface)){$this->debugInterface->add(new PlacedText(new Vec2($unit->position->x + 2, $unit->position->y + 1), "Смотрю на targetEnemy", new Vec2(0, 0), 0.5, MyColor::getColor(MyColor::RED_1)));}
             $targetForMyUnit = $this->targetEnemyForMyUnits[$unit->id];
             //куда идет цель
-            if (!is_null($this->debugInterface)){$this->debugInterface->add(new PolyLine([$targetForMyUnit->position, new Vec2($targetForMyUnit->position->x + $targetForMyUnit->velocity->x, $targetForMyUnit->position->y + $targetForMyUnit->velocity->y)], 0.1, $this->MC->red05));}
+            if (!is_null($this->debugInterface)){$this->debugInterface->add(new PolyLine([$targetForMyUnit->position, new Vec2($targetForMyUnit->position->x + $targetForMyUnit->velocity->x, $targetForMyUnit->position->y + $targetForMyUnit->velocity->y)], 0.1, MyColor::getColor(MyColor::RED_05)));}
             $currentDistanceToTarget = Helper::getDistance($unit->position, $targetForMyUnit->position);
             $k = $currentDistanceToTarget < 100 ? 100 : ($currentDistanceToTarget < 200 ? 2 : (2));
             $targetForMyUnit = new Vec2($targetForMyUnit->position->x + ($targetForMyUnit->velocity->x / $k), $targetForMyUnit->position->y + ($targetForMyUnit->velocity->y / $k));
             $this->actionForMyUnitsEye[$unit->id] = $targetForMyUnit;
             $this->actionTypeForMyUnitsEye[$unit->id] = MyAction::LOOK_AT_TARGET_ENEMY;
-            if (!is_null($this->debugInterface)){$this->debugInterface->add(new PolyLine([$unit->position, $targetForMyUnit], 0.1, $this->MC->red05));}
+            if (!is_null($this->debugInterface)){$this->debugInterface->add(new PolyLine([$unit->position, $targetForMyUnit], 0.1, MyColor::getColor(MyColor::RED_05)));}
             return Helper::getVectorAB($unit->position, $targetForMyUnit);
         }
         //===================Смотрю на target========================
@@ -493,8 +496,8 @@ class MyStrategy
             if (is_null($soundShoot) && !empty($this->soundsGunShoot)) $soundShoot = $this->soundsGunShoot[count($this->soundsGunShoot)-1];
             if (is_null($soundShoot) && !empty($this->soundsSniperShoot)) $soundShoot = $this->soundsSniperShoot[count($this->soundsSniperShoot)-1];
             $this->actionTypeForMyUnitsEye[$unit->id] = MyAction::LOOK_SOUND_SHOOT;
-            if (!is_null($this->debugInterface)){$this->debugInterface->add(new PlacedText(new Vec2($unit->position->x + 2, $unit->position->y + 1), "Смотрю на звук выстрелов", new Vec2(0, 0), 0.5, $this->MC->red1));}
-            if (!is_null($this->debugInterface)){$this->debugInterface->add(new PolyLine([$unit->position, $soundShoot->sound->position], 0.1, $this->MC->red05));}
+            if (!is_null($this->debugInterface)){$this->debugInterface->add(new PlacedText(new Vec2($unit->position->x + 2, $unit->position->y + 1), "Смотрю на звук выстрелов", new Vec2(0, 0), 0.5, MyColor::getColor(MyColor::RED_1)));}
+            if (!is_null($this->debugInterface)){$this->debugInterface->add(new PolyLine([$unit->position, $soundShoot->sound->position], 0.1, MyColor::getColor(MyColor::RED_05)));}
             return Helper::getVectorAB($unit->position, $soundShoot->sound->position);
         }
         //===================Смотрю на звук выстрелов========================
@@ -504,7 +507,7 @@ class MyStrategy
             $targetPosition = new Vec2($unit->direction->y, -$unit->direction->x);
             $this->actionForMyUnitsEye[$unit->id] = $targetPosition;
             $this->actionTypeForMyUnitsEye[$unit->id] = MyAction::LOOK_AROUND_BY_TIMER;
-            if (!is_null($this->debugInterface)){$this->debugInterface->add(new PlacedText(new Vec2($unit->position->x + 2, $unit->position->y + 1), "Осмотреться по таймеру", new Vec2(0, 0), 0.5, $this->MC->red1));}
+            if (!is_null($this->debugInterface)){$this->debugInterface->add(new PlacedText(new Vec2($unit->position->x + 2, $unit->position->y + 1), "Осмотреться по таймеру", new Vec2(0, 0), 0.5, MyColor::getColor(MyColor::RED_1)));}
             return $targetPosition;
         }
         //===================Осмотреться по таймеру========================
@@ -512,14 +515,14 @@ class MyStrategy
         //===================Смотрю по ходу движения========================
         if ((isset($this->actionTypeForMyUnitsFoot[$unit->id]) && $this->actionTypeForMyUnitsFoot[$unit->id] != MyAction::STAY) && isset($this->actionForMyUnitsFoot[$unit->id])){
             $this->actionTypeForMyUnitsEye[$unit->id] = MyAction::LOOK_AT_UNIT_FORWARD;
-            if (!is_null($this->debugInterface)){$this->debugInterface->add(new PlacedText(new Vec2($unit->position->x + 2, $unit->position->y + 1), "Смотрю по ходу движения", new Vec2(0, 0), 0.5, $this->MC->red1));}
+            if (!is_null($this->debugInterface)){$this->debugInterface->add(new PlacedText(new Vec2($unit->position->x + 2, $unit->position->y + 1), "Смотрю по ходу движения", new Vec2(0, 0), 0.5, MyColor::getColor(MyColor::RED_1)));}
             return Helper::getVectorAB($unit->position, $this->actionForMyUnitsFoot[$unit->id]);
         }
         //===================Смотрю по ходу движения========================
 
         //===================Смотрю по кругу========================
         $this->actionTypeForMyUnitsEye[$unit->id] = MyAction::LOOK_AROUND;
-        if (!is_null($this->debugInterface)){$this->debugInterface->add(new PlacedText(new Vec2($unit->position->x + 2, $unit->position->y + 1), "Смотрю по куругу", new Vec2(0, 0), 0.5, $this->MC->red1));}
+        if (!is_null($this->debugInterface)){$this->debugInterface->add(new PlacedText(new Vec2($unit->position->x + 2, $unit->position->y + 1), "Смотрю по куругу", new Vec2(0, 0), 0.5, MyColor::getColor(MyColor::RED_1)));}
         return new Vec2($unit->direction->y, -$unit->direction->x);
         //===================Смотрю по кругу========================
     }
@@ -529,7 +532,7 @@ class MyStrategy
         //===================Применяю пот========================
         if ($unit->shieldPotions > 0 && $unit->shield + $this->constants->shieldPerPotion < $this->constants->maxShield) {
             $this->actionTypeForMyUnitsAction[$unit->id] = MyAction::TYPE_USE_POT;
-            if (!is_null($this->debugInterface)){$this->debugInterface->add(new PlacedText(new Vec2($unit->position->x + 2, $unit->position->y), "Применяю пот", new Vec2(0, 0), 0.5, $this->MC->green1));}
+            if (!is_null($this->debugInterface)){$this->debugInterface->add(new PlacedText(new Vec2($unit->position->x + 2, $unit->position->y), "Применяю пот", new Vec2(0, 0), 0.5, MyColor::getColor(MyColor::GREEN_1)));}
             return new UseShieldPotion();
         }
         //===================Применяю пот========================
@@ -541,7 +544,7 @@ class MyStrategy
             if ($distanceFromUnitToWeaponAmmo < $this->constants->unitRadius) {
                 $this->deleteFromHistoryAmmo($weaponAmmoSniper);
                 $this->actionTypeForMyUnitsAction[$unit->id] = MyAction::RAISE_AMMO_SNIPER;
-                if (!is_null($this->debugInterface)){$this->debugInterface->add(new PlacedText(new Vec2($unit->position->x + 2, $unit->position->y), "Подбираю патроны для снайперки", new Vec2(0, 0), 0.5, $this->MC->green1));}
+                if (!is_null($this->debugInterface)){$this->debugInterface->add(new PlacedText(new Vec2($unit->position->x + 2, $unit->position->y), "Подбираю патроны для снайперки", new Vec2(0, 0), 0.5, MyColor::getColor(MyColor::GREEN_1)));}
                 return new Pickup($weaponAmmoSniper->id);
             }
         }
@@ -554,7 +557,7 @@ class MyStrategy
             if ($distanceFromUnitTWeapon < $this->constants->unitRadius) {
                 $this->deleteFromHistoryWeapon($weaponSniper);
                 $this->actionTypeForMyUnitsAction[$unit->id] = MyAction::RAISE_WEAPON_SNIPER;
-                if (!is_null($this->debugInterface)){$this->debugInterface->add(new PlacedText(new Vec2($unit->position->x + 2, $unit->position->y), "Подбираю снайперку", new Vec2(0, 0), 0.5, $this->MC->green1));}
+                if (!is_null($this->debugInterface)){$this->debugInterface->add(new PlacedText(new Vec2($unit->position->x + 2, $unit->position->y), "Подбираю снайперку", new Vec2(0, 0), 0.5, MyColor::getColor(MyColor::GREEN_1)));}
                 return new Pickup($weaponSniper->id);
             }
         }
@@ -567,7 +570,7 @@ class MyStrategy
             if ($distanceFromUnitToPot < $this->constants->unitRadius) {
                 $this->deleteFromHistoryPot($pot);
                 $this->actionTypeForMyUnitsAction[$unit->id] = MyAction::RAISE_POT;
-                if (!is_null($this->debugInterface)){$this->debugInterface->add(new PlacedText(new Vec2($unit->position->x + 2, $unit->position->y), "Подбираю пот", new Vec2(0, 0), 0.5, $this->MC->green1));}
+                if (!is_null($this->debugInterface)){$this->debugInterface->add(new PlacedText(new Vec2($unit->position->x + 2, $unit->position->y), "Подбираю пот", new Vec2(0, 0), 0.5, MyColor::getColor(MyColor::GREEN_1)));}
                 return new Pickup($pot->id);
             }
         }
@@ -576,14 +579,14 @@ class MyStrategy
         //===================Стреляем по таргет юниту========================
         if ((isset($this->targetEnemyForMyUnits[$unit->id]) && isset($this->actionTypeForMyUnitsEye[$unit->id]) && $this->actionTypeForMyUnitsEye[$unit->id] == MyAction::LOOK_AT_TARGET_ENEMY) && Helper::getDistance($unit->position, $this->targetEnemyForMyUnits[$unit->id]->position) < 500) {
             $this->actionTypeForMyUnitsAction[$unit->id] = MyAction::SHOOT_TO_TARGET_ENEMY;
-            if (!is_null($this->debugInterface)){$this->debugInterface->add(new PlacedText(new Vec2($unit->position->x + 2, $unit->position->y), "Стреляю в targetEnemy", new Vec2(0, 0), 0.5, $this->MC->green1));}
+            if (!is_null($this->debugInterface)){$this->debugInterface->add(new PlacedText(new Vec2($unit->position->x + 2, $unit->position->y), "Стреляю в targetEnemy", new Vec2(0, 0), 0.5, MyColor::getColor(MyColor::GREEN_1)));}
             return new Aim(true);
         }
         //===================Стреляем по таргет юниту========================
 
         //===================Ничего не делаю========================
         $this->actionTypeForMyUnitsAction[$unit->id] = MyAction::DO_NOTHING;
-        if (!is_null($this->debugInterface)){$this->debugInterface->add(new PlacedText(new Vec2($unit->position->x + 2, $unit->position->y), "Ничего не делаю", new Vec2(0, 0), 0.5, $this->MC->green1));}
+        if (!is_null($this->debugInterface)){$this->debugInterface->add(new PlacedText(new Vec2($unit->position->x + 2, $unit->position->y), "Ничего не делаю", new Vec2(0, 0), 0.5, MyColor::getColor(MyColor::GREEN_1)));}
         return null;
         //===================Ничего не делаю========================
     }
@@ -592,7 +595,7 @@ class MyStrategy
     public function goToPosition(Unit $unit, Vec2 $targetPosition): Vec2
     {
         $this->actionForMyUnitsFoot[$unit->id] = $targetPosition;
-        if (!is_null($this->debugInterface)){$this->debugInterface->add(new Circle($targetPosition, 0.5, $this->MC->blue05));}
+        if (!is_null($this->debugInterface)){$this->debugInterface->add(new Circle($targetPosition, 0.5, MyColor::getColor(MyColor::BLUE_05)));}
         if (Helper::isPointInCircle($unit->position, $this->constants->unitRadius, $targetPosition)) {
             return new Vec2(0, 0);
         } else {
@@ -644,15 +647,15 @@ class MyStrategy
     {
         foreach ($this->historyWeapon as $historyByWeaponType) {
             foreach ($historyByWeaponType as $loot) {
-                if (!is_null($this->debugInterface)){$this->debugInterface->add(new Circle(new Vec2($loot->position->x, $loot->position->y+0.5), 0.2, $this->MC->black1));}
+                if (!is_null($this->debugInterface)){$this->debugInterface->add(new Circle(new Vec2($loot->position->x, $loot->position->y+0.5), 0.2, MyColor::getColor(MyColor::BLACK_1)));}
             }
         }
         foreach ($this->historyPot as $loot) {
-            if (!is_null($this->debugInterface)){$this->debugInterface->add(new Circle(new Vec2($loot->position->x, $loot->position->y+0.5), 0.2, $this->MC->black1));}
+            if (!is_null($this->debugInterface)){$this->debugInterface->add(new Circle(new Vec2($loot->position->x, $loot->position->y+0.5), 0.2, MyColor::getColor(MyColor::BLACK_1)));}
         }
         foreach ($this->historyAmmo as $historyByWeaponAmmoType) {
             foreach ($historyByWeaponAmmoType as $loot) {
-                if (!is_null($this->debugInterface)){$this->debugInterface->add(new Circle(new Vec2($loot->position->x, $loot->position->y+0.5), 0.2, $this->MC->black1));}
+                if (!is_null($this->debugInterface)){$this->debugInterface->add(new Circle(new Vec2($loot->position->x, $loot->position->y+0.5), 0.2, MyColor::getColor(MyColor::BLACK_1)));}
             }
         }
     }
@@ -665,7 +668,7 @@ class MyStrategy
         /** @var Unit[] $units */
         $units = $game->units;
         foreach ($units as $unit) {
-            if (!is_null($this->debugInterface)){$this->debugInterface->add(new PlacedText(new Vec2($unit->position->x-1, $unit->position->y-2), "ID = ".$unit->id, new Vec2(0, 0), 0.2, $this->MC->black1));}
+            if (!is_null($this->debugInterface)){$this->debugInterface->add(new PlacedText(new Vec2($unit->position->x-1, $unit->position->y-2), "ID = ".$unit->id, new Vec2(0, 0), 0.2, MyColor::getColor(MyColor::BLACK_1)));}
 
             if ($unit->playerId == $game->myId) {
                 $this->myUnits[$unit->id] = $unit;
@@ -679,8 +682,8 @@ class MyStrategy
             if ($historyEnemy->tick < $game->currentTick - self::CNT_TICK_SAVE_HISTORY_ENEMY){
                 unset($this->historyEnemies[$enemyId]);
             } else {
-                if (!isset($this->enemies[$enemyId]) && !is_null($this->debugInterface)){$this->debugInterface->add(new PlacedText(new Vec2($historyEnemy->unit->position->x-1, $historyEnemy->unit->position->y), "ID = ".$historyEnemy->unit->id, new Vec2(0, 0), 0.2, $this->MC->black1));}
-                if (!isset($this->enemies[$enemyId]) && !is_null($this->debugInterface)){$this->debugInterface->add(new Circle($historyEnemy->unit->position, $this->constants->unitRadius+1, $this->MC->violet05));} //Рисуем примерную позицию звука
+                if (!isset($this->enemies[$enemyId]) && !is_null($this->debugInterface)){$this->debugInterface->add(new PlacedText(new Vec2($historyEnemy->unit->position->x-1, $historyEnemy->unit->position->y), "ID = ".$historyEnemy->unit->id, new Vec2(0, 0), 0.2, MyColor::getColor(MyColor::BLACK_1)));}
+                if (!isset($this->enemies[$enemyId]) && !is_null($this->debugInterface)){$this->debugInterface->add(new Circle($historyEnemy->unit->position, $this->constants->unitRadius+1, MyColor::getColor(MyColor::VIOLET_05)));} //Рисуем примерную позицию звука
             }
         }
     }
@@ -705,19 +708,19 @@ class MyStrategy
                     $weapon = $loot->item;
                     $this->visibleWeapon[$weapon->typeIndex][] = $loot;
                     $this->historyWeapon[$weapon->typeIndex][$loot->id] = $loot;
-                    if (!is_null($this->debugInterface)){$this->debugInterface->add(new Circle(new Vec2($loot->position->x, $loot->position->y+0.5), 0.1, $this->MC->aqua1));}
+                    if (!is_null($this->debugInterface)){$this->debugInterface->add(new Circle(new Vec2($loot->position->x, $loot->position->y+0.5), 0.1, MyColor::getColor(MyColor::AQUA_1)));}
                     break;
                 case ShieldPotions::class:
                     $this->visiblePot[] = $loot;
                     $this->historyPot[$loot->id] = $loot;
-                    if (!is_null($this->debugInterface)){$this->debugInterface->add(new Circle(new Vec2($loot->position->x, $loot->position->y+0.5), 0.1, $this->MC->aqua1));}
+                    if (!is_null($this->debugInterface)){$this->debugInterface->add(new Circle(new Vec2($loot->position->x, $loot->position->y+0.5), 0.1, MyColor::getColor(MyColor::AQUA_1)));}
                     break;
                 case Ammo::class:
                     /** @var Ammo $ammo */
                     $ammo = $loot->item;
                     $this->visibleAmmo[$ammo->weaponTypeIndex][] = $loot;
                     $this->historyAmmo[$ammo->weaponTypeIndex][$loot->id] = $loot;
-                    if (!is_null($this->debugInterface)){$this->debugInterface->add(new Circle(new Vec2($loot->position->x, $loot->position->y+0.5), 0.1, $this->MC->aqua1));}
+                    if (!is_null($this->debugInterface)){$this->debugInterface->add(new Circle(new Vec2($loot->position->x, $loot->position->y+0.5), 0.1, MyColor::getColor(MyColor::AQUA_1)));}
                     break;
             }
         }
@@ -733,13 +736,6 @@ class MyStrategy
             if ($projectile->shooterPlayerId != $game->myId) {
                 $this->projectiles[$projectile->id] = $projectile;
             }
-        }
-    }
-    private function defineObstaclesMap(Constants $constants)
-    {
-        $this->obstacles = [];
-        foreach ($constants->obstacles as $obstacle) {
-            $this->obstacles[] = $obstacle;
         }
     }
 
@@ -765,7 +761,7 @@ class MyStrategy
                 unset($this->soundsSteps[$soundIndex]);
                 $this->soundsSteps = array_values($this->soundsSteps);
             } else {
-                if (!is_null($this->debugInterface)){$this->debugInterface->add(new Circle($mySound->sound->position, $this->constants->unitRadius*2, $this->MC->orange01));} //Рисуем примерную позицию звука
+                if (!is_null($this->debugInterface)){$this->debugInterface->add(new Circle($mySound->sound->position, $this->constants->unitRadius*2, MyColor::getColor(MyColor::ORANGE_01)));} //Рисуем примерную позицию звука
             }
         }
         foreach ($this->soundsPistolShoot as $soundIndex => $mySound) {
@@ -773,7 +769,7 @@ class MyStrategy
                 unset($this->soundsPistolShoot[$soundIndex]);
                 $this->soundsPistolShoot = array_values($this->soundsPistolShoot);
             } else {
-                if (!is_null($this->debugInterface)){$this->debugInterface->add(new Circle($mySound->sound->position, $this->constants->unitRadius*2, $this->MC->lightGreen01));} //Рисуем примерную позицию звука
+                if (!is_null($this->debugInterface)){$this->debugInterface->add(new Circle($mySound->sound->position, $this->constants->unitRadius*2, MyColor::getColor(MyColor::LIGHT_GREEN_01)));} //Рисуем примерную позицию звука
             }
         }
         foreach ($this->soundsPistolHit as $soundIndex => $mySound) {
@@ -781,7 +777,7 @@ class MyStrategy
                 unset($this->soundsPistolHit[$soundIndex]);
                 $this->soundsPistolHit = array_values($this->soundsPistolHit);
             } else {
-                if (!is_null($this->debugInterface)){$this->debugInterface->add(new Circle($mySound->sound->position, $this->constants->unitRadius*2, $this->MC->lightGreen01));} //Рисуем примерную позицию звука
+                if (!is_null($this->debugInterface)){$this->debugInterface->add(new Circle($mySound->sound->position, $this->constants->unitRadius*2, MyColor::getColor(MyColor::LIGHT_GREEN_01)));} //Рисуем примерную позицию звука
             }
         }
         foreach ($this->soundsGunShoot as $soundIndex => $mySound) {
@@ -789,7 +785,7 @@ class MyStrategy
                 unset($this->soundsGunShoot[$soundIndex]);
                 $this->soundsGunShoot = array_values($this->soundsGunShoot);
             } else {
-                if (!is_null($this->debugInterface)){$this->debugInterface->add(new Circle($mySound->sound->position, $this->constants->unitRadius*2, $this->MC->lightBlue01));} //Рисуем примерную позицию звука
+                if (!is_null($this->debugInterface)){$this->debugInterface->add(new Circle($mySound->sound->position, $this->constants->unitRadius*2, MyColor::getColor(MyColor::LIGHT_BLUE_01)));} //Рисуем примерную позицию звука
             }
         }
         foreach ($this->soundsGunHit as $soundIndex => $mySound) {
@@ -797,7 +793,7 @@ class MyStrategy
                 unset($this->soundsGunHit[$soundIndex]);
                 $this->soundsGunHit = array_values($this->soundsGunHit);
             } else {
-                if (!is_null($this->debugInterface)){$this->debugInterface->add(new Circle($mySound->sound->position, $this->constants->unitRadius*2, $this->MC->lightBlue01));} //Рисуем примерную позицию звука
+                if (!is_null($this->debugInterface)){$this->debugInterface->add(new Circle($mySound->sound->position, $this->constants->unitRadius*2, MyColor::getColor(MyColor::LIGHT_BLUE_01)));} //Рисуем примерную позицию звука
             }
         }
         foreach ($this->soundsSniperShoot as $soundIndex => $mySound) {
@@ -805,7 +801,7 @@ class MyStrategy
                 unset($this->soundsSniperShoot[$soundIndex]);
                 $this->soundsSniperShoot = array_values($this->soundsSniperShoot);
             } else {
-                if (!is_null($this->debugInterface)){$this->debugInterface->add(new Circle($mySound->sound->position, $this->constants->unitRadius*2, $this->MC->lightRed01));} //Рисуем примерную позицию звука
+                if (!is_null($this->debugInterface)){$this->debugInterface->add(new Circle($mySound->sound->position, $this->constants->unitRadius*2, MyColor::getColor(MyColor::LIGHT_RED_01)));} //Рисуем примерную позицию звука
             }
         }
         foreach ($this->soundsSniperHit as $soundIndex => $mySound) {
@@ -813,7 +809,7 @@ class MyStrategy
                 unset($this->soundsSniperHit[$soundIndex]);
                 $this->soundsSniperHit = array_values($this->soundsSniperHit);
             } else {
-                if (!is_null($this->debugInterface)){$this->debugInterface->add(new Circle($mySound->sound->position, $this->constants->unitRadius*2, $this->MC->lightRed01));} //Рисуем примерную позицию звука
+                if (!is_null($this->debugInterface)){$this->debugInterface->add(new Circle($mySound->sound->position, $this->constants->unitRadius*2, MyColor::getColor(MyColor::LIGHT_RED_01)));} //Рисуем примерную позицию звука
             }
         }
     }
@@ -839,7 +835,7 @@ class MyStrategy
         }
 
         $this->targetEnemyForMyUnits[$unit->id] = $nearEnemy;
-        if (!is_null($this->debugInterface) && !is_null($this->targetEnemyForMyUnits[$unit->id])){$this->debugInterface->add(new Circle($this->targetEnemyForMyUnits[$unit->id]->position, $this->constants->unitRadius + 1, $this->MC->red05));}
+        if (!is_null($this->debugInterface) && !is_null($this->targetEnemyForMyUnits[$unit->id])){$this->debugInterface->add(new Circle($this->targetEnemyForMyUnits[$unit->id]->position, $this->constants->unitRadius + 1, MyColor::getColor(MyColor::RED_05)));}
     }
 
     private function defineNearestWeaponForMyUnit(Unit $unit): void
@@ -906,32 +902,7 @@ class MyStrategy
         }
     }
 
-    private function defineNearestObstaclesMyUnit(Unit $unit): void
-    {
-        $checkObstacleUnitRadius = 10;
 
-        if (!is_null($this->debugInterface)){$this->debugInterface->add(new Circle($unit->position, $checkObstacleUnitRadius, $this->MC->black01));}
-
-        foreach ($this->obstacles as $obstacle) {
-            if (Helper::isPointInCircle($unit->position, $checkObstacleUnitRadius, $obstacle->position)){
-                if ($unit->velocity->x != 0 || $unit->velocity->y != 0){
-                    $perpendicular = Helper::getPerpendicularTo($unit->position, new Vec2($unit->position->x + $unit->velocity->x, $unit->position->y + $unit->velocity->y), $obstacle->position);
-                    $distanceFromObstacleToPerpendicular = Helper::getDistance($obstacle->position, $perpendicular);
-                    if ($distanceFromObstacleToPerpendicular < $obstacle->radius + $this->constants->unitRadius) {
-//                        if (!is_null($this->debugInterface)){$this->debugInterface->add(new PolyLine([$obstacle->position, $perpendicular], 0.1, $this->MC->red1));}
-//                        if (!is_null($this->debugInterface)){$this->debugInterface->add(new PlacedText(new Vec2($obstacle->position->x+0.3, $obstacle->position->y+0.2), "ObtR=".$obstacle->radius, new Vec2(0, 0), 0.3, $this->MC->green1));}
-//                        if (!is_null($this->debugInterface)){$this->debugInterface->add(new PlacedText(new Vec2($obstacle->position->x+0.3, $obstacle->position->y+1), $distanceFromObstacleToPerpendicular, new Vec2(0, 0), 0.3, $this->MC->red1));}
-//                        if (!is_null($this->debugInterface)){$this->debugInterface->add(new PolyLine([$obstacle->position, new Vec2($obstacle->position->x, $obstacle->position->y + $obstacle->radius)], 0.1, $this->MC->green1));}//test
-//                        if (!is_null($this->debugInterface)){$this->debugInterface->add(new PolyLine([$obstacle->position, new Vec2($obstacle->position->x, $obstacle->position->y - $obstacle->radius)], 0.1, $this->MC->green1));}//test
-//                        if (!is_null($this->debugInterface)){$this->debugInterface->add(new PolyLine([$obstacle->position, new Vec2($obstacle->position->x + $obstacle->radius, $obstacle->position->y)], 0.1, $this->MC->green1));}//test
-//                        if (!is_null($this->debugInterface)){$this->debugInterface->add(new PolyLine([$obstacle->position, new Vec2($obstacle->position->x - $obstacle->radius, $obstacle->position->y)], 0.1, $this->MC->green1));}//test
-//                        if (!is_null($this->debugInterface)){$this->debugInterface->add(new PolyLine([$obstacle->position, $perpendicular], 0.1, $this->MC->red1));}
-                    }
-                }
-                if (!is_null($this->debugInterface)){$this->debugInterface->add(new PolyLine([$unit->position, new Vec2($unit->position->x + $unit->velocity->x, $unit->position->y + $unit->velocity->y)], 0.3, $this->MC->yellow1));}
-            }
-        }
-    }
 
 
 
@@ -985,7 +956,7 @@ class MyStrategy
         $userFictiveRadius = $this->constants->unitRadius + 2;
         foreach ($this->projectiles as $projectile) {
             if (Helper::isIntersectionLineAndCircle($projectile->position, new Vec2($projectile->position->x + $projectile->velocity->x, $projectile->position->y + $projectile->velocity->y), $unit->position, $userFictiveRadius)) {
-                if (!is_null($this->debugInterface)){$this->debugInterface->add(new PolyLine([$projectile->position, new Vec2($projectile->position->x + $projectile->velocity->x, $projectile->position->y + $projectile->velocity->y)], 0.1, $this->MC->black02));}
+                if (!is_null($this->debugInterface)){$this->debugInterface->add(new PolyLine([$projectile->position, new Vec2($projectile->position->x + $projectile->velocity->x, $projectile->position->y + $projectile->velocity->y)], 0.1, MyColor::getColor(MyColor::BLACK_02)));}
 
                 $lineA = $projectile->position;
                 $lineB = new Vec2($projectile->position->x + $projectile->velocity->x, $projectile->position->y + $projectile->velocity->y);
@@ -1021,7 +992,7 @@ class MyStrategy
                 }
             } else {
                 //просто рисуем все пули
-                if (!is_null($this->debugInterface)){$this->debugInterface->add(new PolyLine([$projectile->position, new Vec2($projectile->position->x + $projectile->velocity->x, $projectile->position->y + $projectile->velocity->y)], 0.1, $this->MC->white01));}
+                if (!is_null($this->debugInterface)){$this->debugInterface->add(new PolyLine([$projectile->position, new Vec2($projectile->position->x + $projectile->velocity->x, $projectile->position->y + $projectile->velocity->y)], 0.1, MyColor::getColor(MyColor::WHITE_01)));}
             }
         }
 
@@ -1078,7 +1049,7 @@ class MyStrategy
                 }
             }
             $position = ($numberHit1 >= $numberHit2) ? $nextUnitPosition2 : $nextUnitPosition1;
-            if (!is_null($this->debugInterface)){$this->debugInterface->add(new PolyLine([$unit->position, $position], 0.1, $this->MC->green05));}
+            if (!is_null($this->debugInterface)){$this->debugInterface->add(new PolyLine([$unit->position, $position], 0.1, MyColor::getColor(MyColor::GREEN_05)));}
             return $this->goToPosition($unit, $position);
         }
 
