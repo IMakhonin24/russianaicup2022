@@ -26,6 +26,7 @@ require_once 'Model/Constants.php';
 require_once 'My/MyColor.php';
 require_once 'My/Helper.php';
 require_once 'My/MyObstacles.php';
+require_once 'My/MyProjectiles.php';
 require_once 'My/MyLoot.php';
 require_once 'My/MyUnit.php';
 require_once 'My/MyAction.php';
@@ -37,6 +38,7 @@ class MyStrategy
     private MyObstacles $myObstacles;
     private MyLoot $myLoot;
     private MyUnit $myUnit;
+    private MyProjectiles $myProjectiles;
 
     /**
      * @var array | Projectile[]
@@ -97,14 +99,14 @@ class MyStrategy
         $this->myUnit = new MyUnit($constants);
         $this->myLoot = new MyLoot($constants);
         $this->myObstacles = new MyObstacles($constants);
+        $this->myProjectiles = new MyProjectiles($constants);
     }
 
     private function init(Game $game): void
     {
         $this->myUnit->everyTick();
         $this->myLoot->everyTick();
-
-        $this->defineProjectilesMap($game);
+        $this->myProjectiles->everyTick();
         $this->defineSoundsMap($game);
     }
 
@@ -173,6 +175,7 @@ class MyStrategy
         $this->myUnit->setCommonData($game, $debugInterface);
         $this->myLoot->setCommonData($game, $debugInterface);
         $this->myObstacles->setCommonData($game, $debugInterface);
+        $this->myProjectiles->setCommonData($game, $debugInterface);
     }
 
     private function footController(Game $game, Unit $unit): Vec2
@@ -196,7 +199,7 @@ class MyStrategy
             ));
         }
 
-        foreach ($this->projectiles as $projectile) {
+        foreach ($this->myProjectiles->projectiles as $projectile) {
             if (Helper::isIntersectionLineAndCircle($projectile->position, new Vec2($projectile->position->x + $projectile->velocity->x, $projectile->position->y + $projectile->velocity->y), $unit->position, $userFictiveRadius)) {
                 if (!is_null($this->debugInterface)){$this->debugInterface->add(new PolyLine([$projectile->position, new Vec2($projectile->position->x + $projectile->velocity->x, $projectile->position->y + $projectile->velocity->y)], 0.1, MyColor::getColor(MyColor::BLACK_02)));}
 
@@ -282,7 +285,7 @@ class MyStrategy
         if (isset($nextUnitPosition1) && isset($nextUnitPosition2)) {
             $numberHit1 = 0;
             $numberHit2 = 0;
-            foreach ($this->projectiles as $projectile) {
+            foreach ($this->myProjectiles->projectiles as $projectile) {
                 if (Helper::isIntersectionLineAndCircle($projectile->position, new Vec2($projectile->position->x + $projectile->velocity->x, $projectile->position->y + $projectile->velocity->y), $nextUnitPosition1, $this->constants->unitRadius)) {
                     $numberHit1++;
                 }
@@ -531,18 +534,7 @@ class MyStrategy
     {
     }
 
-    private function defineProjectilesMap(Game $game): void
-    {
-        $this->projectiles = [];
 
-        /** @var Projectile[] $projectiles */
-        $projectiles = $game->projectiles;
-        foreach ($projectiles as $projectile) {
-            if ($projectile->shooterPlayerId != $game->myId) {
-                $this->projectiles[$projectile->id] = $projectile;
-            }
-        }
-    }
 
     private function defineSoundsMap(Game $game): void
     {
