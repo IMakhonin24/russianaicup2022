@@ -14,6 +14,7 @@ use Model\Item\Ammo;
 use Model\Item\ShieldPotions;
 use Model\Item\Weapon;
 use Model\Loot;
+use Model\Obstacle;
 use Model\Order;
 use Model\Projectile;
 use Model\Sound;
@@ -105,6 +106,11 @@ class MyStrategy
     private array $projectiles; //Массив пуль
 
     /**
+     * @var array | Obstacle[]
+     */
+    private array $obstacles; //Массив препятствий
+
+    /**
      * @var array | MySound[]
      */
     private array $soundsSteps = []; //Массив звуков шагов
@@ -157,6 +163,8 @@ class MyStrategy
     {
         $this->constants = $constants;
         $this->MC = new MyColor();
+
+        $this->defineObstaclesMap($constants);
     }
 
     private function init(Game $game): void
@@ -188,6 +196,7 @@ class MyStrategy
         $this->defineNearestWeaponForMyUnit($unit);
         $this->defineNearestPotForMyUnit($unit);
         $this->defineNearestAmmoForMyUnit($unit);
+        $this->defineNearestObstaclesMyUnit($unit);
 
         //cnt in personal area
         foreach ($this->historyEnemies as $historyEnemy) {
@@ -723,6 +732,13 @@ class MyStrategy
             }
         }
     }
+    private function defineObstaclesMap(Constants $constants)
+    {
+        $this->obstacles = [];
+        foreach ($constants->obstacles as $obstacle) {
+            $this->obstacles[] = $obstacle;
+        }
+    }
 
     private function defineSoundsMap(Game $game): void
     {
@@ -887,6 +903,33 @@ class MyStrategy
         }
     }
 
+    private function defineNearestObstaclesMyUnit(Unit $unit): void
+    {
+        $checkObstacleUnitRadius = 10;
+
+        if (!is_null($this->debugInterface)){$this->debugInterface->add(new Circle($unit->position, $checkObstacleUnitRadius, $this->MC->black01));}
+
+        foreach ($this->obstacles as $obstacle) {
+            if (Helper::isPointInCircle($unit->position, $checkObstacleUnitRadius, $obstacle->position)){
+                if ($unit->velocity->x != 0 || $unit->velocity->y != 0){
+                    $perpendicular = Helper::getPerpendicularTo($unit->position, new Vec2($unit->position->x + $unit->velocity->x, $unit->position->y + $unit->velocity->y), $obstacle->position);
+                    $distanceFromObstacleToPerpendicular = Helper::getDistance($obstacle->position, $perpendicular);
+                    if ($distanceFromObstacleToPerpendicular < $obstacle->radius + $this->constants->unitRadius) {
+//                        if (!is_null($this->debugInterface)){$this->debugInterface->add(new PolyLine([$obstacle->position, $perpendicular], 0.1, $this->MC->red1));}
+//                        if (!is_null($this->debugInterface)){$this->debugInterface->add(new PlacedText(new Vec2($obstacle->position->x+0.3, $obstacle->position->y+0.2), "ObtR=".$obstacle->radius, new Vec2(0, 0), 0.3, $this->MC->green1));}
+//                        if (!is_null($this->debugInterface)){$this->debugInterface->add(new PlacedText(new Vec2($obstacle->position->x+0.3, $obstacle->position->y+1), $distanceFromObstacleToPerpendicular, new Vec2(0, 0), 0.3, $this->MC->red1));}
+//                        if (!is_null($this->debugInterface)){$this->debugInterface->add(new PolyLine([$obstacle->position, new Vec2($obstacle->position->x, $obstacle->position->y + $obstacle->radius)], 0.1, $this->MC->green1));}//test
+//                        if (!is_null($this->debugInterface)){$this->debugInterface->add(new PolyLine([$obstacle->position, new Vec2($obstacle->position->x, $obstacle->position->y - $obstacle->radius)], 0.1, $this->MC->green1));}//test
+//                        if (!is_null($this->debugInterface)){$this->debugInterface->add(new PolyLine([$obstacle->position, new Vec2($obstacle->position->x + $obstacle->radius, $obstacle->position->y)], 0.1, $this->MC->green1));}//test
+//                        if (!is_null($this->debugInterface)){$this->debugInterface->add(new PolyLine([$obstacle->position, new Vec2($obstacle->position->x - $obstacle->radius, $obstacle->position->y)], 0.1, $this->MC->green1));}//test
+//                        if (!is_null($this->debugInterface)){$this->debugInterface->add(new PolyLine([$obstacle->position, $perpendicular], 0.1, $this->MC->red1));}
+                    }
+                }
+                if (!is_null($this->debugInterface)){$this->debugInterface->add(new PolyLine([$unit->position, new Vec2($unit->position->x + $unit->velocity->x, $unit->position->y + $unit->velocity->y)], 0.3, $this->MC->yellow1));}
+            }
+        }
+    }
+
 
 
 
@@ -1046,7 +1089,7 @@ class Helper
 {
     public static function getDistance(Vec2 $a, Vec2 $b): float
     {
-        return ($a->x - $b->x) * ($a->x - $b->x) + ($a->y - $b->y) * ($a->y - $b->y);
+        return sqrt(($a->x - $b->x) * ($a->x - $b->x) + ($a->y - $b->y) * ($a->y - $b->y));
     }
 
     public static function getVectorAB(Vec2 $a, Vec2 $b): Vec2
