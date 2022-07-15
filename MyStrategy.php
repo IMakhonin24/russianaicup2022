@@ -27,41 +27,16 @@ require_once 'My/MyColor.php';
 require_once 'My/Helper.php';
 require_once 'My/MyObstacles.php';
 require_once 'My/MyLoot.php';
+require_once 'My/MyUnit.php';
+require_once 'My/MyAction.php';
 
 class MyStrategy
 {
-
-
     private Constants $constants;
-    private Game $game;
 
     private MyObstacles $myObstacles;
     private MyLoot $myLoot;
-
-    /**
-     * @var array | Unit[]
-     */
-    private array $myUnits;
-
-    /**
-     * @var array | Unit[]
-     */
-    private array $enemies;
-
-    /**
-     * @var array | Unit[]
-     */
-    private array $targetEnemyForMyUnits;
-
-    /**
-     * @var array | Unit[]
-     */
-    private array $enemyInPersonalAreaForMyUnits;
-
-    /**
-     * @var array | MyUnit[]
-     */
-    private array $historyEnemies = []; //История примерного местоположения врагов
+    private MyUnit $myUnit;
 
     /**
      * @var array | Projectile[]
@@ -118,16 +93,15 @@ class MyStrategy
 
     function __construct(Constants $constants)
     {
-        $this->constants = $constants;
+        $this->constants = $constants;//todo удалить
+        $this->myUnit = new MyUnit($constants);
         $this->myLoot = new MyLoot($constants);
         $this->myObstacles = new MyObstacles($constants);
     }
 
     private function init(Game $game): void
     {
-        $this->targetEnemyForMyUnits = [];
-
-        $this->defineUnitMap($game);
+        $this->myUnit->everyTick();
         $this->myLoot->everyTick();
 
         $this->defineProjectilesMap($game);
@@ -142,23 +116,10 @@ class MyStrategy
         $this->actionTypeForMyUnitsFoot = [];
         $this->actionTypeForMyUnitsEye = [];
         $this->actionTypeForMyUnitsAction = [];
-        $this->enemyInPersonalAreaForMyUnits[$unit->id] = [];
 
-        $this->defineEnemyTargetForMyUnit($unit);
+        $this->myUnit->everyUnit($unit);
         $this->myLoot->everyUnit($unit);
-        $this->myObstacles->defineNearestObstaclesMyUnit($unit);
-
-        //cnt in personal area
-        foreach ($this->historyEnemies as $historyEnemy) {
-            if (Helper::isPointInCircle($unit->position, $this->constants->unitRadius * MyCommonConst::COEFFICIENT_PERSONAL_AREA, $historyEnemy->unit->position)) {
-                $this->enemyInPersonalAreaForMyUnits[$unit->id][$historyEnemy->unit->id] = $historyEnemy->unit;
-            }
-        }
-        foreach ($this->enemies as $enemy) {
-            if (Helper::isPointInCircle($unit->position, $this->constants->unitRadius * MyCommonConst::COEFFICIENT_PERSONAL_AREA, $enemy->position)) {
-                $this->enemyInPersonalAreaForMyUnits[$unit->id][$enemy->id] = $enemy;
-            }
-        }
+        $this->myObstacles->everyUnit($unit);
     }
 
 
@@ -170,6 +131,8 @@ class MyStrategy
         $this->debugInterface = $debugInterface;
         $this->game = $game;
         $this->init($game);
+
+
         $order = [];
 
 
@@ -181,7 +144,7 @@ class MyStrategy
             ));
         }
 
-        foreach ($this->myUnits as $unit) {
+        foreach ($this->myUnit->myUnits as $unit) {
             $this->initForUnit($unit);
 
             $order[$unit->id] = new UnitOrder(
@@ -198,7 +161,7 @@ class MyStrategy
             if (!is_null($this->debugInterface)){$this->debugInterface->add(new PlacedText(new Vec2($unit->position->x - 4, $unit->position->y+0.6), "Pots: " . $unit->shieldPotions . "/" .$this->constants->maxShieldPotionsInInventory, new Vec2(0, 0), 0.3, MyColor::getColor(MyColor::BLUE_1)));}
             if (!is_null($this->debugInterface)){$this->debugInterface->add(new PlacedText(new Vec2($unit->position->x - 4, $unit->position->y-1.3), "DistanceToTargetEnemy: ".(isset($this->targetEnemyForMyUnits[$unit->id])?Helper::getDistance($unit->position, $this->targetEnemyForMyUnits[$unit->id]->position) : 'null'), new Vec2(0, 0), 0.3, MyColor::getColor(MyColor::BLUE_1)));}
             if (!is_null($this->debugInterface)){$this->debugInterface->add(new PlacedText(new Vec2($unit->position->x - 4, $unit->position->y-1.6), "Velocity: (". (int)$unit->velocity->x.";".(int)$unit->velocity->y.") = ".(int)Helper::getDistance($unit->position,new Vec2($unit->position->x + $unit->velocity->x,$unit->position->y + $unit->velocity->y)), new Vec2(0, 0), 0.3, MyColor::getColor(MyColor::BLUE_1)));}
-            if (!is_null($this->debugInterface)){$this->debugInterface->add(new PlacedText(new Vec2($unit->position->x - 4, $unit->position->y+0.2), "In person area: ". count($this->enemyInPersonalAreaForMyUnits[$unit->id]), new Vec2(0, 0), 0.3, MyColor::getColor(MyColor::BLUE_1)));}
+            if (!is_null($this->debugInterface)){$this->debugInterface->add(new PlacedText(new Vec2($unit->position->x - 4, $unit->position->y+0.2), "In person area: ". count($this->myUnit->enemyInPersonalAreaForMyUnits[$unit->id]), new Vec2(0, 0), 0.3, MyColor::getColor(MyColor::BLUE_1)));}
             if (!is_null($this->debugInterface)){$this->debugInterface->add(new Circle($unit->position, $this->constants->unitRadius * MyCommonConst::COEFFICIENT_PERSONAL_AREA, MyColor::getColor(MyColor::YELLOW_01)));}//PersonalArea Circle
         }
 
@@ -207,6 +170,7 @@ class MyStrategy
 
     private function setCommonData(Game $game, ?DebugInterface $debugInterface): void
     {
+        $this->myUnit->setCommonData($game, $debugInterface);
         $this->myLoot->setCommonData($game, $debugInterface);
         $this->myObstacles->setCommonData($game, $debugInterface);
     }
@@ -344,9 +308,9 @@ class MyStrategy
         //===================Уходим от зоны========================
 
         //===================Убегаем от толпы========================
-        if (count($this->enemyInPersonalAreaForMyUnits[$unit->id]) >= 2){
+        if (count($this->myUnit->enemyInPersonalAreaForMyUnits[$unit->id]) >= 2){
             $positions = [];
-            foreach ($this->enemyInPersonalAreaForMyUnits[$unit->id] as $enemyInPersonalAreaForMyUnit) {
+            foreach ($this->myUnit->enemyInPersonalAreaForMyUnits[$unit->id] as $enemyInPersonalAreaForMyUnit) {
                 $positions[] = $enemyInPersonalAreaForMyUnit->position;
                 if (!is_null($this->debugInterface)){$this->debugInterface->add(new PolyLine([$unit->position, $enemyInPersonalAreaForMyUnit->position], 0.3, MyColor::getColor(MyColor::RED_05)));}
             }
@@ -567,38 +531,6 @@ class MyStrategy
     {
     }
 
-
-
-
-
-    private function defineUnitMap(Game $game): void
-    {
-        $this->myUnits = [];
-        $this->enemies = [];
-
-        /** @var Unit[] $units */
-        $units = $game->units;
-        foreach ($units as $unit) {
-            if (!is_null($this->debugInterface)){$this->debugInterface->add(new PlacedText(new Vec2($unit->position->x-1, $unit->position->y-2), "ID = ".$unit->id, new Vec2(0, 0), 0.2, MyColor::getColor(MyColor::BLACK_1)));}
-
-            if ($unit->playerId == $game->myId) {
-                $this->myUnits[$unit->id] = $unit;
-            } else {
-                $this->enemies[$unit->id] = $unit;
-                $this->historyEnemies[$unit->id] = new MyUnit($unit, $game->currentTick);
-            }
-        }
-
-        foreach ($this->historyEnemies as $enemyId => $historyEnemy) {
-            if ($historyEnemy->tick < $game->currentTick - MyCommonConst::CNT_TICK_SAVE_HISTORY_ENEMY){
-                unset($this->historyEnemies[$enemyId]);
-            } else {
-                if (!isset($this->enemies[$enemyId]) && !is_null($this->debugInterface)){$this->debugInterface->add(new PlacedText(new Vec2($historyEnemy->unit->position->x-1, $historyEnemy->unit->position->y), "ID = ".$historyEnemy->unit->id, new Vec2(0, 0), 0.2, MyColor::getColor(MyColor::BLACK_1)));}
-                if (!isset($this->enemies[$enemyId]) && !is_null($this->debugInterface)){$this->debugInterface->add(new Circle($historyEnemy->unit->position, $this->constants->unitRadius+1, MyColor::getColor(MyColor::VIOLET_05)));} //Рисуем примерную позицию звука
-            }
-        }
-    }
-
     private function defineProjectilesMap(Game $game): void
     {
         $this->projectiles = [];
@@ -687,23 +619,6 @@ class MyStrategy
         }
     }
 
-    private function defineEnemyTargetForMyUnit(Unit $unit): void
-    {
-        $nearEnemy = null;
-        $distanceToNearEnemy = null;
-
-        foreach ($this->enemies as $enemy) {
-            $distanceFromUnitToEnemy = Helper::getDistance($unit->position, $enemy->position);
-            if (is_null($distanceToNearEnemy) || $distanceToNearEnemy > $distanceFromUnitToEnemy) {
-                $distanceToNearEnemy = $distanceFromUnitToEnemy;
-                $nearEnemy = $enemy;
-            }
-        }
-
-        $this->targetEnemyForMyUnits[$unit->id] = $nearEnemy;
-        if (!is_null($this->debugInterface) && !is_null($this->targetEnemyForMyUnits[$unit->id])){$this->debugInterface->add(new Circle($this->targetEnemyForMyUnits[$unit->id]->position, $this->constants->unitRadius + 1, MyColor::getColor(MyColor::RED_05)));}
-    }
-
 
     private function deleteFromHistoryWeapon(Loot $loot): void
     {
@@ -752,41 +667,3 @@ class MySound{
         $this->tick = $tick;
     }
 }
-
-class MyAction {
-    const TYPE_USE_POT = 10;
-    const RAISE_AMMO_SNIPER = 20;
-    const RAISE_WEAPON_SNIPER = 30;
-    const RAISE_POT = 40;
-    const SHOOT_TO_TARGET_ENEMY = 50;
-    const DO_NOTHING = 60;
-
-    const LOOK_AROUND_BY_TIMER = 70;
-    const LOOK_AT_TARGET_ENEMY = 80;
-    const LOOK_AROUND_FIRST = 89;
-    const LOOK_AROUND = 90;
-    const LOOK_AT_UNIT_FORWARD = 91;
-    const LOOK_AT_UNIT_FORWARD_WHILE_MISS_BULLET = 92;
-    const LOOK_SOUND_STEPS = 93;
-    const LOOK_SOUND_SHOOT = 94;
-
-    const TRY_TO_MISS_BULLET = 100;
-    const GO_OUT_FROM_GREY_ZONE = 110;
-    const GO_OUT_FROM_A_LOT_OF_UNIT = 115;
-    const GO_TO_WEAPON_SNIPER = 120;
-    const GO_TO_AMMO_SNIPER = 130;
-    const GO_TO_POT = 140;
-    const STAY = 150;
-}
-
-class MyUnit {
-    public Unit $unit;
-    public int $tick;
-
-    public function __construct(Unit $unit, $tick)
-    {
-        $this->unit = $unit;
-        $this->tick = $tick;
-    }
-}
-

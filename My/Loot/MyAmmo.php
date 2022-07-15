@@ -85,6 +85,10 @@ class MyAmmo implements CommonData, EveryTick, EveryUnit
 
     public function everyTick(): void
     {
+        $this->visiblePistolAmmo = [];
+        $this->visibleGunAmmo = [];
+        $this->visibleSniperAmmo = [];
+
         foreach ($this->historyPistolAmmo as $historyPistolAmmo) {
             if (!is_null($this->debugInterface)) {
                 $this->debugInterface->add(new Circle(new Vec2($historyPistolAmmo->position->x, $historyPistolAmmo->position->y + 0.5), 0.2, MyColor::getColor(MyColor::BLACK_1)));

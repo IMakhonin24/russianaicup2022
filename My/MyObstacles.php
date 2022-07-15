@@ -9,8 +9,9 @@ use Model\Unit;
 use Model\Vec2;
 
 require_once 'CommonData.php';
+require_once 'EveryUnit.php';
 
-class MyObstacles implements CommonData
+class MyObstacles implements CommonData, EveryUnit
 {
     private Constants $constants;
     private ?DebugInterface $debugInterface;
@@ -31,6 +32,11 @@ class MyObstacles implements CommonData
         $this->debugInterface = $debugInterface;
     }
 
+    public function everyUnit(Unit $unit): void
+    {
+        $this->defineNearestObstaclesMyUnit($unit);
+    }
+
     private function defineObstaclesMap(Constants $constants)
     {
         $this->obstacles = [];
@@ -39,16 +45,18 @@ class MyObstacles implements CommonData
         }
     }
 
-    public function defineNearestObstaclesMyUnit(Unit $unit): void
+    private function defineNearestObstaclesMyUnit(Unit $unit): void
     {
         $checkObstacleUnitRadius = 10;
 
-        if (!is_null($this->debugInterface)){$this->debugInterface->add(new Circle($unit->position, $checkObstacleUnitRadius, MyColor::getColor(MyColor::BLACK_01)));}
+        if (!is_null($this->debugInterface)) {
+            $this->debugInterface->add(new Circle($unit->position, $checkObstacleUnitRadius, MyColor::getColor(MyColor::BLACK_01)));
+        }
 
         //todo парсинг препятствий
         foreach ($this->obstacles as $obstacle) {
-            if (Helper::isPointInCircle($unit->position, $checkObstacleUnitRadius, $obstacle->position)){
-                if ($unit->velocity->x != 0 || $unit->velocity->y != 0){
+            if (Helper::isPointInCircle($unit->position, $checkObstacleUnitRadius, $obstacle->position)) {
+                if ($unit->velocity->x != 0 || $unit->velocity->y != 0) {
                     $perpendicular = Helper::getPerpendicularTo($unit->position, new Vec2($unit->position->x + $unit->velocity->x, $unit->position->y + $unit->velocity->y), $obstacle->position);
                     $distanceFromObstacleToPerpendicular = Helper::getDistance($obstacle->position, $perpendicular);
                     if ($distanceFromObstacleToPerpendicular < $obstacle->radius + $this->constants->unitRadius) {
@@ -62,7 +70,9 @@ class MyObstacles implements CommonData
 //                        if (!is_null($this->debugInterface)){$this->debugInterface->add(new PolyLine([$obstacle->position, $perpendicular], 0.1, MyColor::getColor(MyColor::RED_1)));}
                     }
                 }
-                if (!is_null($this->debugInterface)){$this->debugInterface->add(new PolyLine([$unit->position, new Vec2($unit->position->x + $unit->velocity->x, $unit->position->y + $unit->velocity->y)], 0.3, MyColor::getColor(MyColor::YELLOW_1)));}
+                if (!is_null($this->debugInterface)) {
+                    $this->debugInterface->add(new PolyLine([$unit->position, new Vec2($unit->position->x + $unit->velocity->x, $unit->position->y + $unit->velocity->y)], 0.3, MyColor::getColor(MyColor::YELLOW_1)));
+                }
             }
         }
     }

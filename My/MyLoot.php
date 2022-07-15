@@ -25,7 +25,7 @@ class MyLoot implements CommonData, EveryTick, EveryUnit
     /**
      * @var array | Loot[]
      */
-    private array $loots;
+    private array $loots; //todo unset
 
     public function __construct(Constants $constants)
     {

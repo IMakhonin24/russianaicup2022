@@ -46,6 +46,8 @@ class MyPot implements CommonData, EveryTick
 
     public function everyTick(): void
     {
+        $this->visiblePot = [];
+
         foreach ($this->historyPot as $historyPot) {
             if (!is_null($this->debugInterface)) {
                 $this->debugInterface->add(new Circle(new Vec2($historyPot->position->x, $historyPot->position->y + 0.5), 0.2, MyColor::getColor(MyColor::BLACK_1)));
