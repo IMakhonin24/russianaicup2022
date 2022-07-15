@@ -8,16 +8,17 @@ use Model\Obstacle;
 use Model\Unit;
 use Model\Vec2;
 
-class MyObstacles
+require_once 'CommonData.php';
+
+class MyObstacles implements CommonData
 {
     private Constants $constants;
+    private ?DebugInterface $debugInterface;
 
     /**
      * @var array | Obstacle[]
      */
     public array $obstacles; //Массив препятствий
-
-    private ?DebugInterface $debugInterface;
 
     public function __construct(Constants $constants)
     {
