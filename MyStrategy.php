@@ -9,12 +9,7 @@ use Model\ActionOrder\Pickup;
 use Model\ActionOrder\UseShieldPotion;
 use Model\Constants;
 use Model\Game;
-use Model\Item\Ammo;
-use Model\Item\Weapon;
-use Model\Loot;
 use Model\Order;
-use Model\Projectile;
-use Model\Sound;
 use Model\Unit;
 use Model\UnitOrder;
 use Model\Vec2;
@@ -27,6 +22,7 @@ require_once 'My/MyColor.php';
 require_once 'My/Helper.php';
 require_once 'My/MyObstacles.php';
 require_once 'My/MyProjectiles.php';
+require_once 'My/MySound.php';
 require_once 'My/MyLoot.php';
 require_once 'My/MyUnit.php';
 require_once 'My/MyAction.php';
@@ -39,40 +35,7 @@ class MyStrategy
     private MyLoot $myLoot;
     private MyUnit $myUnit;
     private MyProjectiles $myProjectiles;
-
-    /**
-     * @var array | Projectile[]
-     */
-    private array $projectiles; //Массив пуль
-
-    /**
-     * @var array | MySound[]
-     */
-    private array $soundsSteps = []; //Массив звуков шагов
-    /**
-     * @var array | MySound[]
-     */
-    private array $soundsPistolShoot = []; //Массив звуков выстрел пистолета
-    /**
-     * @var array | MySound[]
-     */
-    private array $soundsGunShoot = []; //Массив звуков выстрел автомата
-    /**
-     * @var array | MySound[]
-     */
-    private array $soundsSniperShoot = []; //Массив звуков выстрел снайперки
-    /**
-     * @var array | MySound[]
-     */
-    private array $soundsPistolHit = []; //Массив звуков попадание пистолета
-    /**
-     * @var array | MySound[]
-     */
-    private array $soundsGunHit = []; //Массив звуков попадание автомата
-    /**
-     * @var array | MySound[]
-     */
-    private array $soundsSniperHit = []; //Массив звуков попадание снайперки
+    private MySound $mySound;
 
     /**
      * @var Vec2[]
@@ -100,17 +63,10 @@ class MyStrategy
         $this->myLoot = new MyLoot($constants);
         $this->myObstacles = new MyObstacles($constants);
         $this->myProjectiles = new MyProjectiles($constants);
+        $this->mySound = new MySound($constants);
     }
 
-    private function init(Game $game): void
-    {
-        $this->myUnit->everyTick();
-        $this->myLoot->everyTick();
-        $this->myProjectiles->everyTick();
-        $this->defineSoundsMap($game);
-    }
-
-    private function initForUnit(Unit $unit): void
+    private function everyUnit(Unit $unit): void
     {
         $this->actionForMyUnitsFoot = [];
         $this->actionForMyUnitsEye = [];
@@ -124,20 +80,15 @@ class MyStrategy
         $this->myObstacles->everyUnit($unit);
     }
 
-
-
     function getOrder(Game $game, ?DebugInterface $debugInterface): Order
     {
         $this->setCommonData($game, $debugInterface);
+        $this->everyTick();
 
-        $this->debugInterface = $debugInterface;
-        $this->game = $game;
-        $this->init($game);
+        $this->debugInterface = $debugInterface; // todo
 
 
         $order = [];
-
-
         if (!is_null($this->debugInterface)){
             $this->debugInterface->add(new Circle(
                 $game->zone->currentCenter,
@@ -147,7 +98,7 @@ class MyStrategy
         }
 
         foreach ($this->myUnit->myUnits as $unit) {
-            $this->initForUnit($unit);
+            $this->everyUnit($unit);
 
             $order[$unit->id] = new UnitOrder(
                 $this->footController($game, $unit),
@@ -176,6 +127,15 @@ class MyStrategy
         $this->myLoot->setCommonData($game, $debugInterface);
         $this->myObstacles->setCommonData($game, $debugInterface);
         $this->myProjectiles->setCommonData($game, $debugInterface);
+        $this->mySound->setCommonData($game, $debugInterface);
+    }
+
+    private function everyTick(): void
+    {
+        $this->myUnit->everyTick();
+        $this->myLoot->everyTick();
+        $this->myProjectiles->everyTick();
+        $this->mySound->everyTick();
     }
 
     private function footController(Game $game, Unit $unit): Vec2
@@ -463,7 +423,7 @@ class MyStrategy
             $weaponAmmoSniper = $this->nearestAmmoForMyUnits[$unit->id][MyWeapon::SNIPER];
             $distanceFromUnitToWeaponAmmo = Helper::getDistance($unit->position, $weaponAmmoSniper->position);
             if ($distanceFromUnitToWeaponAmmo < $this->constants->unitRadius) {
-                $this->deleteFromHistoryAmmo($weaponAmmoSniper);
+                $this->myLoot->myAmmo->deleteFromHistory($weaponAmmoSniper);
                 $this->actionTypeForMyUnitsAction[$unit->id] = MyAction::RAISE_AMMO_SNIPER;
                 if (!is_null($this->debugInterface)){$this->debugInterface->add(new PlacedText(new Vec2($unit->position->x + 2, $unit->position->y), "Подбираю патроны для снайперки", new Vec2(0, 0), 0.5, MyColor::getColor(MyColor::GREEN_1)));}
                 return new Pickup($weaponAmmoSniper->id);
@@ -476,7 +436,7 @@ class MyStrategy
             $weaponSniper = $this->nearestWeaponForMyUnits[$unit->id][MyWeapon::SNIPER];
             $distanceFromUnitTWeapon = Helper::getDistance($unit->position, $weaponSniper->position);
             if ($distanceFromUnitTWeapon < $this->constants->unitRadius) {
-                $this->deleteFromHistoryWeapon($weaponSniper);
+                $this->myLoot->myWeapon->deleteFromHistory($weaponSniper);
                 $this->actionTypeForMyUnitsAction[$unit->id] = MyAction::RAISE_WEAPON_SNIPER;
                 if (!is_null($this->debugInterface)){$this->debugInterface->add(new PlacedText(new Vec2($unit->position->x + 2, $unit->position->y), "Подбираю снайперку", new Vec2(0, 0), 0.5, MyColor::getColor(MyColor::GREEN_1)));}
                 return new Pickup($weaponSniper->id);
@@ -489,7 +449,7 @@ class MyStrategy
             $pot = $this->nearestPotForMyUnits[$unit->id];
             $distanceFromUnitToPot = Helper::getDistance($unit->position, $pot->position);
             if ($distanceFromUnitToPot < $this->constants->unitRadius) {
-                $this->deleteFromHistoryPot($pot);
+                $this->myLoot->myPot->deleteFromHistory($pot);
                 $this->actionTypeForMyUnitsAction[$unit->id] = MyAction::RAISE_POT;
                 if (!is_null($this->debugInterface)){$this->debugInterface->add(new PlacedText(new Vec2($unit->position->x + 2, $unit->position->y), "Подбираю пот", new Vec2(0, 0), 0.5, MyColor::getColor(MyColor::GREEN_1)));}
                 return new Pickup($pot->id);
@@ -532,130 +492,5 @@ class MyStrategy
 
     function finish()
     {
-    }
-
-
-
-    private function defineSoundsMap(Game $game): void
-    {
-        /** @var Sound[] $sounds */
-        $sounds = $game->sounds;
-        foreach ($sounds as $sound) {
-            switch ($sound->typeIndex){
-                case MySound::STEPS:        $this->soundsSteps[] = new MySound($sound, $game->currentTick);; break;
-                case MySound::PISTOL_SOOT:  $this->soundsPistolShoot[] = new MySound($sound, $game->currentTick); break;
-                case MySound::PISTOL_HIT:   $this->soundsPistolHit[] = new MySound($sound, $game->currentTick); break;
-                case MySound::GUN_SOOT:     $this->soundsGunShoot[] = new MySound($sound, $game->currentTick); break;
-                case MySound::GUN_HIT:      $this->soundsGunHit[] = new MySound($sound, $game->currentTick); break;
-                case MySound::SNIPER_SOOT:  $this->soundsSniperShoot[] = new MySound($sound, $game->currentTick); break;
-                case MySound::SNIPER_HIT:   $this->soundsSniperHit[] = new MySound($sound, $game->currentTick); break;
-            }
-        }
-
-        //удаляем устаревшие звуки
-        foreach ($this->soundsSteps as $soundIndex => $mySound) {
-            if ($mySound->tick < $game->currentTick - MyCommonConst::CNT_TICK_SAVE_SOUND){
-                unset($this->soundsSteps[$soundIndex]);
-                $this->soundsSteps = array_values($this->soundsSteps);
-            } else {
-                if (!is_null($this->debugInterface)){$this->debugInterface->add(new Circle($mySound->sound->position, $this->constants->unitRadius*2, MyColor::getColor(MyColor::ORANGE_01)));} //Рисуем примерную позицию звука
-            }
-        }
-        foreach ($this->soundsPistolShoot as $soundIndex => $mySound) {
-            if ($mySound->tick < $game->currentTick - MyCommonConst::CNT_TICK_SAVE_SOUND){
-                unset($this->soundsPistolShoot[$soundIndex]);
-                $this->soundsPistolShoot = array_values($this->soundsPistolShoot);
-            } else {
-                if (!is_null($this->debugInterface)){$this->debugInterface->add(new Circle($mySound->sound->position, $this->constants->unitRadius*2, MyColor::getColor(MyColor::LIGHT_GREEN_01)));} //Рисуем примерную позицию звука
-            }
-        }
-        foreach ($this->soundsPistolHit as $soundIndex => $mySound) {
-            if ($mySound->tick < $game->currentTick - MyCommonConst::CNT_TICK_SAVE_SOUND){
-                unset($this->soundsPistolHit[$soundIndex]);
-                $this->soundsPistolHit = array_values($this->soundsPistolHit);
-            } else {
-                if (!is_null($this->debugInterface)){$this->debugInterface->add(new Circle($mySound->sound->position, $this->constants->unitRadius*2, MyColor::getColor(MyColor::LIGHT_GREEN_01)));} //Рисуем примерную позицию звука
-            }
-        }
-        foreach ($this->soundsGunShoot as $soundIndex => $mySound) {
-            if ($mySound->tick < $game->currentTick - MyCommonConst::CNT_TICK_SAVE_SOUND){
-                unset($this->soundsGunShoot[$soundIndex]);
-                $this->soundsGunShoot = array_values($this->soundsGunShoot);
-            } else {
-                if (!is_null($this->debugInterface)){$this->debugInterface->add(new Circle($mySound->sound->position, $this->constants->unitRadius*2, MyColor::getColor(MyColor::LIGHT_BLUE_01)));} //Рисуем примерную позицию звука
-            }
-        }
-        foreach ($this->soundsGunHit as $soundIndex => $mySound) {
-            if ($mySound->tick < $game->currentTick - MyCommonConst::CNT_TICK_SAVE_SOUND){
-                unset($this->soundsGunHit[$soundIndex]);
-                $this->soundsGunHit = array_values($this->soundsGunHit);
-            } else {
-                if (!is_null($this->debugInterface)){$this->debugInterface->add(new Circle($mySound->sound->position, $this->constants->unitRadius*2, MyColor::getColor(MyColor::LIGHT_BLUE_01)));} //Рисуем примерную позицию звука
-            }
-        }
-        foreach ($this->soundsSniperShoot as $soundIndex => $mySound) {
-            if ($mySound->tick < $game->currentTick - MyCommonConst::CNT_TICK_SAVE_SOUND){
-                unset($this->soundsSniperShoot[$soundIndex]);
-                $this->soundsSniperShoot = array_values($this->soundsSniperShoot);
-            } else {
-                if (!is_null($this->debugInterface)){$this->debugInterface->add(new Circle($mySound->sound->position, $this->constants->unitRadius*2, MyColor::getColor(MyColor::LIGHT_RED_01)));} //Рисуем примерную позицию звука
-            }
-        }
-        foreach ($this->soundsSniperHit as $soundIndex => $mySound) {
-            if ($mySound->tick < $game->currentTick - MyCommonConst::CNT_TICK_SAVE_SOUND){
-                unset($this->soundsSniperHit[$soundIndex]);
-                $this->soundsSniperHit = array_values($this->soundsSniperHit);
-            } else {
-                if (!is_null($this->debugInterface)){$this->debugInterface->add(new Circle($mySound->sound->position, $this->constants->unitRadius*2, MyColor::getColor(MyColor::LIGHT_RED_01)));} //Рисуем примерную позицию звука
-            }
-        }
-    }
-
-
-    private function deleteFromHistoryWeapon(Loot $loot): void
-    {
-        /** @var Weapon $weapon */
-        $weapon = $loot->item;
-        if (isset($this->historyWeapon[$weapon->typeIndex][$loot->id])) {
-            unset($this->historyWeapon[$weapon->typeIndex][$loot->id]);
-        }
-    }
-
-    private function deleteFromHistoryPot(Loot $loot): void
-    {
-        if (isset($this->historyPot[$loot->id])) {
-            unset($this->historyPot[$loot->id]);
-        }
-    }
-
-    private function deleteFromHistoryAmmo(Loot $loot): void
-    {
-        /** @var Ammo $ammo */
-        $ammo = $loot->item;
-        if (isset($this->historyAmmo[$ammo->weaponTypeIndex][$loot->id])) {
-            unset($this->historyAmmo[$ammo->weaponTypeIndex][$loot->id]);
-        }
-    }
-
-
-}
-
-class MySound{
-
-    const STEPS = 0;        //Ораньжевый
-    const PISTOL_SOOT = 1;  //Зеленый
-    const GUN_SOOT = 2;     //Синий
-    const SNIPER_SOOT = 3;  //Красный
-    const PISTOL_HIT = 4;   //Зеленый
-    const GUN_HIT = 5;      //Синий
-    const SNIPER_HIT = 6;   //Красный
-
-    public Sound $sound;
-    public int $tick;
-
-    public function __construct(Sound $sound, $tick)
-    {
-        $this->sound = $sound;
-        $this->tick = $tick;
     }
 }

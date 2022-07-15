@@ -244,4 +244,18 @@ class MyWeapon implements CommonData, EveryTick, EveryUnit
                 return "Undefined";
         }
     }
+
+    /**
+     * Удалит Оружие из истории
+     *
+     * @param Loot $weapon
+     */
+    public function deleteFromHistory(Loot $weapon): void
+    {
+        /** @var Weapon $weaponType */
+        $weaponType = $weapon->item;
+        if (isset($this->historyWeapon[$weaponType->typeIndex][$weapon->id])) {
+            unset($this->historyWeapon[$weaponType->typeIndex][$weapon->id]);
+        }
+    }
 }

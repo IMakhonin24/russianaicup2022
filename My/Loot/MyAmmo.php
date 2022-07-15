@@ -73,7 +73,7 @@ class MyAmmo implements CommonData, EveryTick, EveryUnit
 
     public function __construct()
     {
-        $this->currentZoneCentre = new Vec2(0,0);
+        $this->currentZoneCentre = new Vec2(0, 0);
     }
 
     public function setCommonData(Game $game, ?DebugInterface $debugInterface): void
@@ -219,5 +219,19 @@ class MyAmmo implements CommonData, EveryTick, EveryUnit
             }
         }
         $this->nearestSniperAmmoForMyUnits[$unit->id] = $nearWeaponAmmo;
+    }
+
+    /**
+     * Удалит патроны из истории
+     *
+     * @param Loot $ammo
+     */
+    public function deleteFromHistory(Loot $ammo): void
+    {
+        /** @var Ammo $ammoType */
+        $ammoType = $ammo->item;
+        if (isset($this->historyAmmo[$ammoType->weaponTypeIndex][$ammo->id])) {
+            unset($this->historyAmmo[$ammoType->weaponTypeIndex][$ammo->id]);
+        }
     }
 }

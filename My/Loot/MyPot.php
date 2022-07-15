@@ -98,4 +98,16 @@ class MyPot implements CommonData, EveryTick
         }
         $this->nearestPotForMyUnits[$unit->id] = $nearPot;
     }
+
+    /**
+     * Удалит аптечку из истории
+     *
+     * @param Loot $pot
+     */
+    public function deleteFromHistory(Loot $pot): void
+    {
+        if (isset($this->historyPot[$pot->id])) {
+            unset($this->historyPot[$pot->id]);
+        }
+    }
 }
