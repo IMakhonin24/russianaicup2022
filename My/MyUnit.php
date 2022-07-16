@@ -104,11 +104,10 @@ class MyUnit implements CommonData, EveryTick, EveryUnit
                 unset($this->historyEnemies[$enemyId]);
             } else {
                 if (!isset($this->enemies[$enemyId]) && !is_null($this->debugInterface)) {
-                    $this->debugInterface->add(new PlacedText(new Vec2($historyEnemy->unit->position->x - 1, $historyEnemy->unit->position->y), "ID = " . $historyEnemy->unit->id, new Vec2(0, 0), 0.2, MyColor::getColor(MyColor::BLACK_1)));
-                }
-                if (!isset($this->enemies[$enemyId]) && !is_null($this->debugInterface)) {
-                    $this->debugInterface->add(new Circle($historyEnemy->unit->position, $this->unitRadius + 1, MyColor::getColor(MyColor::VIOLET_05)));
-                } //Рисуем примерную позицию звука
+                    $this->debugInterface->add(new Circle($historyEnemy->unit->position, $this->unitRadius, MyColor::getColor(MyColor::VIOLET_01)));
+                    $this->debugInterface->add(new PlacedText(new Vec2($historyEnemy->unit->position->x-0.2, $historyEnemy->unit->position->y), "HU", new Vec2(0, 0), 0.3, MyColor::getColor(MyColor::BLACK_1)));
+                    $this->debugInterface->add(new PlacedText(new Vec2($historyEnemy->unit->position->x-0.5, $historyEnemy->unit->position->y-0.5), $historyEnemy->unit->id, new Vec2(0, 0), 0.3, MyColor::getColor(MyColor::BLACK_1)));
+                } //Рисуем примерную позицию истории юнита
             }
         }
     }

@@ -1,9 +1,13 @@
 <?php
 
 use Debugging\DebugData\Circle;
+use Debugging\DebugData\PlacedText;
 use Model\Constants;
 use Model\Game;
 use Model\Sound;
+use Model\Vec2;
+
+require_once 'MyHistorySound.php';
 
 class MySound implements CommonData, EveryTick
 {
@@ -126,7 +130,9 @@ class MySound implements CommonData, EveryTick
                 $this->soundsSteps = array_values($this->soundsSteps);
             } else {
                 if (!is_null($this->debugInterface)) {
-                    $this->debugInterface->add(new Circle($mySound->sound->position, $this->unitRadius * 2, MyColor::getColor(MyColor::ORANGE_01)));
+                    $this->debugInterface->add(new Circle($mySound->sound->position, $this->unitRadius, MyColor::getColor(MyColor::ORANGE_01)));
+                    $this->debugInterface->add(new PlacedText(new Vec2($mySound->sound->position->x-0.35, $mySound->sound->position->y+0.1), "Sound", new Vec2(0, 0), 0.2, MyColor::getColor(MyColor::BLACK_1)));
+                    $this->debugInterface->add(new PlacedText(new Vec2($mySound->sound->position->x-0.3, $mySound->sound->position->y-0.1), "Steps", new Vec2(0, 0), 0.2, MyColor::getColor(MyColor::BLACK_1)));
                 } //Рисуем примерную позицию звука
             }
         }
@@ -136,7 +142,10 @@ class MySound implements CommonData, EveryTick
                 $this->soundsPistolShoot = array_values($this->soundsPistolShoot);
             } else {
                 if (!is_null($this->debugInterface)) {
-                    $this->debugInterface->add(new Circle($mySound->sound->position, $this->unitRadius * 2, MyColor::getColor(MyColor::LIGHT_GREEN_01)));
+                    $this->debugInterface->add(new Circle($mySound->sound->position, $this->unitRadius, MyColor::getColor(MyColor::LIGHT_GREEN_01)));
+                    $this->debugInterface->add(new PlacedText(new Vec2($mySound->sound->position->x-0.35, $mySound->sound->position->y+0.1), "Sound", new Vec2(0, 0), 0.2, MyColor::getColor(MyColor::BLACK_1)));
+                    $this->debugInterface->add(new PlacedText(new Vec2($mySound->sound->position->x-0.5, $mySound->sound->position->y-0.1), "PistolShot", new Vec2(0, 0), 0.2, MyColor::getColor(MyColor::BLACK_1)));
+
                 } //Рисуем примерную позицию звука
             }
         }
@@ -146,7 +155,10 @@ class MySound implements CommonData, EveryTick
                 $this->soundsPistolHit = array_values($this->soundsPistolHit);
             } else {
                 if (!is_null($this->debugInterface)) {
-                    $this->debugInterface->add(new Circle($mySound->sound->position, $this->unitRadius * 2, MyColor::getColor(MyColor::LIGHT_GREEN_01)));
+                    $this->debugInterface->add(new Circle($mySound->sound->position, $this->unitRadius, MyColor::getColor(MyColor::LIGHT_GREEN_01)));
+                    $this->debugInterface->add(new PlacedText(new Vec2($mySound->sound->position->x-0.35, $mySound->sound->position->y+0.1), "Sound", new Vec2(0, 0), 0.2, MyColor::getColor(MyColor::BLACK_1)));
+                    $this->debugInterface->add(new PlacedText(new Vec2($mySound->sound->position->x-0.4, $mySound->sound->position->y-0.1), "PistolHit", new Vec2(0, 0), 0.2, MyColor::getColor(MyColor::BLACK_1)));
+
                 } //Рисуем примерную позицию звука
             }
         }
@@ -156,7 +168,10 @@ class MySound implements CommonData, EveryTick
                 $this->soundsGunShoot = array_values($this->soundsGunShoot);
             } else {
                 if (!is_null($this->debugInterface)) {
-                    $this->debugInterface->add(new Circle($mySound->sound->position, $this->unitRadius * 2, MyColor::getColor(MyColor::LIGHT_BLUE_01)));
+                    $this->debugInterface->add(new Circle($mySound->sound->position, $this->unitRadius, MyColor::getColor(MyColor::LIGHT_BLUE_01)));
+                    $this->debugInterface->add(new PlacedText(new Vec2($mySound->sound->position->x-0.35, $mySound->sound->position->y+0.1), "Sound", new Vec2(0, 0), 0.2, MyColor::getColor(MyColor::BLACK_1)));
+                    $this->debugInterface->add(new PlacedText(new Vec2($mySound->sound->position->x-0.35, $mySound->sound->position->y-0.1), "GunShot", new Vec2(0, 0), 0.2, MyColor::getColor(MyColor::BLACK_1)));
+
                 } //Рисуем примерную позицию звука
             }
         }
@@ -166,7 +181,10 @@ class MySound implements CommonData, EveryTick
                 $this->soundsGunHit = array_values($this->soundsGunHit);
             } else {
                 if (!is_null($this->debugInterface)) {
-                    $this->debugInterface->add(new Circle($mySound->sound->position, $this->unitRadius * 2, MyColor::getColor(MyColor::LIGHT_BLUE_01)));
+                    $this->debugInterface->add(new Circle($mySound->sound->position, $this->unitRadius, MyColor::getColor(MyColor::LIGHT_BLUE_01)));
+                    $this->debugInterface->add(new PlacedText(new Vec2($mySound->sound->position->x-0.35, $mySound->sound->position->y+0.1), "Sound", new Vec2(0, 0), 0.2, MyColor::getColor(MyColor::BLACK_1)));
+                    $this->debugInterface->add(new PlacedText(new Vec2($mySound->sound->position->x-0.35, $mySound->sound->position->y-0.1), "GunHit", new Vec2(0, 0), 0.2, MyColor::getColor(MyColor::BLACK_1)));
+
                 } //Рисуем примерную позицию звука
             }
         }
@@ -176,7 +194,10 @@ class MySound implements CommonData, EveryTick
                 $this->soundsSniperShoot = array_values($this->soundsSniperShoot);
             } else {
                 if (!is_null($this->debugInterface)) {
-                    $this->debugInterface->add(new Circle($mySound->sound->position, $this->unitRadius * 2, MyColor::getColor(MyColor::LIGHT_RED_01)));
+                    $this->debugInterface->add(new Circle($mySound->sound->position, $this->unitRadius, MyColor::getColor(MyColor::LIGHT_RED_01)));
+                    $this->debugInterface->add(new PlacedText(new Vec2($mySound->sound->position->x-0.35, $mySound->sound->position->y+0.1), "Sound", new Vec2(0, 0), 0.2, MyColor::getColor(MyColor::BLACK_1)));
+                    $this->debugInterface->add(new PlacedText(new Vec2($mySound->sound->position->x-0.4, $mySound->sound->position->y-0.1), "SniperShot", new Vec2(0, 0), 0.2, MyColor::getColor(MyColor::BLACK_1)));
+
                 } //Рисуем примерную позицию звука
             }
         }
@@ -186,7 +207,9 @@ class MySound implements CommonData, EveryTick
                 $this->soundsSniperHit = array_values($this->soundsSniperHit);
             } else {
                 if (!is_null($this->debugInterface)) {
-                    $this->debugInterface->add(new Circle($mySound->sound->position, $this->unitRadius * 2, MyColor::getColor(MyColor::LIGHT_RED_01)));
+                    $this->debugInterface->add(new Circle($mySound->sound->position, $this->unitRadius, MyColor::getColor(MyColor::LIGHT_RED_01)));
+                    $this->debugInterface->add(new PlacedText(new Vec2($mySound->sound->position->x-0.35, $mySound->sound->position->y+0.1), "Sound", new Vec2(0, 0), 0.2, MyColor::getColor(MyColor::BLACK_1)));
+                    $this->debugInterface->add(new PlacedText(new Vec2($mySound->sound->position->x-0.4, $mySound->sound->position->y-0.1), "SniperHit", new Vec2(0, 0), 0.2, MyColor::getColor(MyColor::BLACK_1)));
                 } //Рисуем примерную позицию звука
             }
         }

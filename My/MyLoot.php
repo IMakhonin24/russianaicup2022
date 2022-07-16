@@ -73,6 +73,4 @@ class MyLoot implements CommonData, EveryTick, EveryUnit
         }
     }
 
-
-
 }
