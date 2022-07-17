@@ -1,5 +1,6 @@
 <?php
 
+use Model\Constants;
 use Model\Game;
 use Model\Unit;
 
@@ -14,17 +15,16 @@ class MyDanger implements CommonData, EveryTick, EveryUnit
     const LEVEL_2 = 2;  //Высокий уровень опасности
 
     /**
-     * @var array | int[][]
+     * @var array | int[]
      */
     private array $dangerLevelForMyUnit = [];
 
-    public function __construct()
+    public function __construct(Constants $constants)
     {
     }
 
     public function setCommonData(Game $game, ?DebugInterface $debugInterface): void
     {
-        $this->loots = $game->loot;
     }
 
     public function everyTick(): void
@@ -39,6 +39,12 @@ class MyDanger implements CommonData, EveryTick, EveryUnit
 
     private function defineDangerLevel(Unit $unit)
     {
+        $this->dangerLevelForMyUnit[$unit->id] = self::LEVEL_0;
+    }
+
+    public function getDangerLevel(Unit $unit): int
+    {
+        return $this->dangerLevelForMyUnit[$unit->id];
     }
 
 }

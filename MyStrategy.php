@@ -17,7 +17,15 @@ require_once 'My/MySound.php';
 require_once 'My/MyLoot.php';
 require_once 'My/MyUnit.php';
 require_once 'My/MyAction.php';
-require_once 'My/MyOrder.php';
+require_once 'My/MyDanger.php';
+
+require_once 'My/Order/MyTargetVelocity.php';
+require_once 'My/Order/MyTargetDirection.php';
+require_once 'My/Order/MyActionOrder.php';
+
+require_once 'My/Strategy/Strategy0.php';
+require_once 'My/Strategy/Strategy1.php';
+require_once 'My/Strategy/Strategy2.php';
 
 class MyStrategy
 {
@@ -26,16 +34,20 @@ class MyStrategy
     private MyUnit $myUnit;
     private MyProjectiles $myProjectiles;
     private MySound $mySound;
-    private MyOrder $myOrder;
+    private MyDanger $myDanger;
+
+    private Constants $constants;
 
     function __construct(Constants $constants)
     {
+        $this->constants = $constants;
+
         $this->myUnit = new MyUnit($constants);
         $this->myLoot = new MyLoot($constants);
         $this->myObstacles = new MyObstacles($constants);
         $this->myProjectiles = new MyProjectiles($constants);
         $this->mySound = new MySound($constants);
-        $this->myOrder = new MyOrder($constants);
+        $this->myDanger = new MyDanger($constants);
     }
 
     function getOrder(Game $game, ?DebugInterface $debugInterface): Order
@@ -43,11 +55,28 @@ class MyStrategy
         $this->setCommonData($game, $debugInterface);
         $this->everyTick();
 
+        $order = [];
+
         foreach ($this->myUnit->myUnits as $unit) {
             $this->everyUnit($unit);
+
+            switch ($this->myDanger->getDangerLevel($unit)) {
+                case MyDanger::LEVEL_0:
+                    $strategy = new Strategy0($unit, $this->myObstacles, $this->myLoot, $this->myUnit, $this->myProjectiles, $this->mySound, $this->constants, $debugInterface);
+                    $order[$unit->id] = $strategy->getOrder();
+                    break;
+                case MyDanger::LEVEL_1:
+                    $strategy = new Strategy1($unit, $this->myObstacles, $this->myLoot, $this->myUnit, $this->myProjectiles, $this->mySound, $this->constants, $debugInterface);
+                    $order[$unit->id] = $strategy->getOrder();
+                    break;
+                case MyDanger::LEVEL_2:
+                    $strategy = new Strategy2($unit, $this->myObstacles, $this->myLoot, $this->myUnit, $this->myProjectiles, $this->mySound, $this->constants, $debugInterface);
+                    $order[$unit->id] = $strategy->getOrder();
+                    break;
+            }
         }
 
-        return new Order($this->myOrder->getOrderForMyUnits());
+        return new Order($order);
     }
 
     private function setCommonData(Game $game, ?DebugInterface $debugInterface): void
@@ -57,7 +86,6 @@ class MyStrategy
         $this->myObstacles->setCommonData($game, $debugInterface);
         $this->myProjectiles->setCommonData($game, $debugInterface);
         $this->mySound->setCommonData($game, $debugInterface);
-        $this->myOrder->setCommonData($game, $debugInterface);
     }
 
     private function everyTick(): void
@@ -66,6 +94,7 @@ class MyStrategy
         $this->myLoot->everyTick();
         $this->myProjectiles->everyTick();
         $this->mySound->everyTick();
+        $this->myDanger->everyTick();
     }
 
     private function everyUnit(Unit $unit): void
@@ -73,7 +102,7 @@ class MyStrategy
         $this->myUnit->everyUnit($unit);
         $this->myLoot->everyUnit($unit);
         $this->myObstacles->everyUnit($unit);
-        $this->myOrder->everyUnit($unit);
+        $this->myDanger->everyUnit($unit);
     }
 
     function debugUpdate(DebugInterface $debug_interface)
