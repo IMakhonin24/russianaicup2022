@@ -47,7 +47,7 @@ class MyStrategy
             $this->everyUnit($unit);
         }
 
-        return new Order($this->myOrder->getOrderForMyUnit());
+        return new Order($this->myOrder->getOrderForMyUnits());
     }
 
     private function setCommonData(Game $game, ?DebugInterface $debugInterface): void

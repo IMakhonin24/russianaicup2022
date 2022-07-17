@@ -70,9 +70,7 @@ class MyObstacles implements CommonData, EveryUnit
 //                        if (!is_null($this->debugInterface)){$this->debugInterface->add(new PolyLine([$obstacle->position, $perpendicular], 0.1, MyColor::getColor(MyColor::RED_1)));}
                     }
                 }
-                if (!is_null($this->debugInterface)) {
-                    $this->debugInterface->add(new PolyLine([$unit->position, new Vec2($unit->position->x + $unit->velocity->x, $unit->position->y + $unit->velocity->y)], 0.3, MyColor::getColor(MyColor::YELLOW_1)));
-                }
+
             }
         }
     }

@@ -150,4 +150,19 @@ class Helper
         return new Vec2($centre->x + ($averageX * -1), $centre->y + ($averageY * -1));
     }
 
+    /**
+     * Вернет точку C которая лежит на прямой AB на расстоянии AC
+     *
+     * @param Vec2 $lineA
+     * @param Vec2 $lineB
+     * @param float $distanceAC
+     * @return Vec2
+     */
+    public static function getPointOnLineABAtDistanceAC(Vec2 $lineA, Vec2 $lineB, float $distanceAC): Vec2
+    {
+        $distanceAB = Helper::getDistance($lineA, $lineB);
+        $k = $distanceAC / $distanceAB;
+        return new Vec2($lineA->x + ($lineB->x - $lineA->x) * $k, $lineA->y + ($lineB->y - $lineA->y) * $k);
+    }
+
 }
