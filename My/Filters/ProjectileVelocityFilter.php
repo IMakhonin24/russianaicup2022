@@ -1,7 +1,6 @@
 <?php
 
 use Debugging\DebugData\Circle;
-use Debugging\DebugData\PlacedText;
 use Debugging\DebugData\PolyLine;
 use Model\Constants;
 use Model\Unit;
@@ -9,7 +8,7 @@ use Model\Vec2;
 
 class ProjectileVelocityFilter implements VelocityFilter
 {
-    private const ENABLE_DEBUG_FILTER = true;
+    private const ENABLE_DEBUG_FILTER = false;
 
     private Vec2 $targetVelocity;
 
@@ -61,7 +60,7 @@ class ProjectileVelocityFilter implements VelocityFilter
                 $this->unit->position,
                 $userFictiveRadius
             )) {
-                if (!is_null($this->debugInterface)){$this->debugInterface->add(new PolyLine([$projectile->position, new Vec2($projectile->position->x + $projectile->velocity->x, $projectile->position->y + $projectile->velocity->y)], 0.1, MyColor::getColor(MyColor::BLACK_02)));}
+                if (self::ENABLE_DEBUG_FILTER && !is_null($this->debugInterface)){$this->debugInterface->add(new PolyLine([$projectile->position, new Vec2($projectile->position->x + $projectile->velocity->x, $projectile->position->y + $projectile->velocity->y)], 0.1, MyColor::getColor(MyColor::BLACK_02)));}
 
                 $lineA = $projectile->position;
                 $lineB = new Vec2($projectile->position->x + $projectile->velocity->x, $projectile->position->y + $projectile->velocity->y);
@@ -101,7 +100,7 @@ class ProjectileVelocityFilter implements VelocityFilter
 
             } else {
                 //просто рисуем все пули
-                if (!is_null($this->debugInterface)){$this->debugInterface->add(new PolyLine([$projectile->position, new Vec2($projectile->position->x + $projectile->velocity->x, $projectile->position->y + $projectile->velocity->y)], 0.1, MyColor::getColor(MyColor::BLACK_01)));}
+                if (self::ENABLE_DEBUG_FILTER && !is_null($this->debugInterface)){$this->debugInterface->add(new PolyLine([$projectile->position, new Vec2($projectile->position->x + $projectile->velocity->x, $projectile->position->y + $projectile->velocity->y)], 0.1, MyColor::getColor(MyColor::BLACK_01)));}
             }
         }
 
@@ -158,7 +157,7 @@ class ProjectileVelocityFilter implements VelocityFilter
                 }
             }
             $position = ($numberHit1 >= $numberHit2) ? $nextUnitPosition2 : $nextUnitPosition1;
-            if (!is_null($this->debugInterface)){$this->debugInterface->add(new PolyLine([$this->unit->position, $position], 0.1, MyColor::getColor(MyColor::RED_1)));}
+            if (self::ENABLE_DEBUG_FILTER && !is_null($this->debugInterface)){$this->debugInterface->add(new PolyLine([$this->unit->position, $position], 0.1, MyColor::getColor(MyColor::RED_1)));}
 
             $vectorRecommend = Helper::getVectorAB($this->unit->position, $position);
             $this->targetVelocity = new Vec2($this->targetVelocity->x + $vectorRecommend->x, $this->targetVelocity->y + $vectorRecommend->y);

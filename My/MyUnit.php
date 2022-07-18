@@ -42,7 +42,7 @@ class MyUnit implements CommonData, EveryTick, EveryUnit
     /**
      * @var array | MyHistoryUnit[]
      */
-    private array $historyEnemies = [];
+    public array $historyEnemies = [];
 
     /**
      * @var array | Unit[]

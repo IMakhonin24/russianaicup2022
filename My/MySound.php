@@ -27,51 +27,51 @@ class MySound implements CommonData, EveryTick
     /**
      * Массив звуков шагов
      *
-     * @var array | MySound[]
+     * @var array | MyHistorySound[]
      */
-    private array $soundsSteps = [];
+    public array $soundsSteps = [];
 
     /**
      * Массив звуков выстрел пистолета
      *
-     * @var array | MySound[]
+     * @var array | MyHistorySound[]
      */
-    private array $soundsPistolShoot = [];
+    public array $soundsPistolShoot = [];
 
     /**
      * Массив звуков выстрел автомата
      *
-     * @var array | MySound[]
+     * @var array | MyHistorySound[]
      */
-    private array $soundsGunShoot = [];
+    public array $soundsGunShoot = [];
 
     /**
      * Массив звуков выстрел снайперки
      *
-     * @var array | MySound[]
+     * @var array | MyHistorySound[]
      */
-    private array $soundsSniperShoot = [];
+    public array $soundsSniperShoot = [];
 
     /**
      * Массив звуков попадание пистолета
      *
-     * @var array | MySound[]
+     * @var array | MyHistorySound[]
      */
-    private array $soundsPistolHit = [];
+    public array $soundsPistolHit = [];
 
     /**
      * Массив звуков попадание автомата
      *
      * @var array | MySound[]
      */
-    private array $soundsGunHit = [];
+    public array $soundsGunHit = [];
 
     /**
      * Массив звуков попадание снайперки
      *
      * @var array | MySound[]
      */
-    private array $soundsSniperHit = [];
+    public array $soundsSniperHit = [];
 
     /**
      * @var array | Sound[]

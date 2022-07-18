@@ -53,7 +53,7 @@ class MyStrategy
         $this->myObstacles = new MyObstacles($constants);
         $this->myProjectiles = new MyProjectiles($constants);
         $this->mySound = new MySound($constants);
-        $this->myDanger = new MyDanger($constants);
+        $this->myDanger = new MyDanger($this->mySound, $this->myUnit, $constants);
     }
 
     function getOrder(Game $game, ?DebugInterface $debugInterface): Order
@@ -102,6 +102,7 @@ class MyStrategy
         $this->myObstacles->setCommonData($game, $debugInterface);
         $this->myProjectiles->setCommonData($game, $debugInterface);
         $this->mySound->setCommonData($game, $debugInterface);
+        $this->myDanger->setCommonData($game, $debugInterface);
     }
 
     private function everyTick(): void
