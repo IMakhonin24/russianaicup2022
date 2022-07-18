@@ -2,7 +2,8 @@
 
 use Model\Unit;
 
-class MyHistoryUnit {
+class MyHistoryUnit
+{
     public Unit $unit;
     public int $tick;
 

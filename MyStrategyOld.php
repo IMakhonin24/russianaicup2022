@@ -143,7 +143,7 @@ class MyStrategyOld
             ));
         }
 
-        foreach ($this->myProjectiles->projectiles as $projectile) {
+        foreach ($this->myProjectiles->allProjectiles as $projectile) {
             if (Helper::isIntersectionLineAndCircle($projectile->position, new Vec2($projectile->position->x + $projectile->velocity->x, $projectile->position->y + $projectile->velocity->y), $unit->position, $userFictiveRadius)) {
                 if (!is_null($this->debugInterface)){$this->debugInterface->add(new PolyLine([$projectile->position, new Vec2($projectile->position->x + $projectile->velocity->x, $projectile->position->y + $projectile->velocity->y)], 0.1, MyColor::getColor(MyColor::BLACK_02)));}
 
@@ -229,7 +229,7 @@ class MyStrategyOld
         if (isset($nextUnitPosition1) && isset($nextUnitPosition2)) {
             $numberHit1 = 0;
             $numberHit2 = 0;
-            foreach ($this->myProjectiles->projectiles as $projectile) {
+            foreach ($this->myProjectiles->allProjectiles as $projectile) {
                 if (Helper::isIntersectionLineAndCircle($projectile->position, new Vec2($projectile->position->x + $projectile->velocity->x, $projectile->position->y + $projectile->velocity->y), $nextUnitPosition1, $this->constants->unitRadius)) {
                     $numberHit1++;
                 }

@@ -4,7 +4,6 @@ use Model\Constants;
 use Model\Game;
 use Model\Obstacle;
 use Model\Unit;
-use Model\Vec2;
 
 require_once 'CommonData.php';
 require_once 'EveryUnit.php';

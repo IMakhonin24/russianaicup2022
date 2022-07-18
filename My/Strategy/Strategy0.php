@@ -40,8 +40,10 @@ class Strategy0 implements OrderStrategy
         $this->myTargetVelocity = new MyTargetVelocity(
             $unit,
             $this->myObstacles,
+            $this->myProjectiles,
             $this->constants,
-            $this->debugInterface);
+            $this->debugInterface
+        );
         $this->myTargetDirection = new MyTargetDirection();
         $this->myActionOrder = new MyActionOrder();
     }
@@ -50,21 +52,34 @@ class Strategy0 implements OrderStrategy
     public function getOrder(): UnitOrder
     {
         $unitTargetPosition = new Vec2(0, 0);
-        $zeroVectorVelocity = Helper::getPointOnLineABAtDistanceAC(new Vec2(0, 0), Helper::getVectorAB($this->unit->position, $unitTargetPosition), $this->constants->maxUnitForwardSpeed);
+//        $unitTargetPosition = $this->unit->position;
+
+        $velocityDistance = Helper::getDistance(new Vec2(0, 0), Helper::getVectorAB($this->unit->position, $unitTargetPosition));
+        if ($velocityDistance > 0){
+            $zeroVectorVelocity = Helper::getPointOnLineABAtDistanceAC(new Vec2(0, 0), Helper::getVectorAB($this->unit->position, $unitTargetPosition), $this->constants->maxUnitForwardSpeed);
+        }else{
+            $zeroVectorVelocity = new Vec2(0, 0);
+        }
+
 
         $this->myTargetVelocity->setTargetVelocity($zeroVectorVelocity);
-        if (!is_null($this->debugInterface)) {
+        if (!is_null($this->debugInterface) && ($velocityDistance > 0)) {
             $this->debugInterface->add(new PolyLine([$this->unit->position, $unitTargetPosition], 0.1, MyColor::getColor(MyColor::GREEN_05)));//Line to TargetPosition
             $this->debugInterface->add(new PlacedText(Helper::getPointOnLineABAtDistanceAC($this->unit->position, $unitTargetPosition, 2.0), "TargetPosition", new Vec2(0, 0), 0.1, MyColor::getColor(MyColor::GREEN_1)));
-            $this->debugInterface->add(new PolyLine([$this->unit->position, new Vec2($this->unit->position->x + $zeroVectorVelocity->x, $this->unit->position->y + $zeroVectorVelocity->y)], 0.1, MyColor::getColor(MyColor::BLUE_05)));//Line to Velocity
-            $this->debugInterface->add(new PlacedText(Helper::getPointOnLineABAtDistanceAC($this->unit->position, $unitTargetPosition, 1.5), "Velocity", new Vec2(0, 0), 0.1, MyColor::getColor(MyColor::BLUE_1)));
         }
 
         $this->myTargetDirection->setTargetDirection(new Vec2(-$this->unit->direction->y, $this->unit->direction->x));
         $this->myActionOrder->setActionOrder(null);
 
+
+        $resultTargetVelocity = $this->myTargetVelocity->getTargetVelocity();
+        if (!is_null($this->debugInterface) && ($velocityDistance > 0)) {
+            $this->debugInterface->add(new PolyLine([$this->unit->position, new Vec2($this->unit->position->x + $resultTargetVelocity->x, $this->unit->position->y + $resultTargetVelocity->y)], 0.1, MyColor::getColor(MyColor::BLUE_05)));//Line to Velocity
+            $this->debugInterface->add(new PlacedText(Helper::getPointOnLineABAtDistanceAC($this->unit->position, $unitTargetPosition, 1.5), "Velocity", new Vec2(0, 0), 0.1, MyColor::getColor(MyColor::BLUE_1)));
+        }
+
         return new UnitOrder(
-            $this->myTargetVelocity->getTargetVelocity(),
+            $resultTargetVelocity,
             $this->myTargetDirection->getTargetDirection(),
             $this->myActionOrder->getActionOrder(),
         );

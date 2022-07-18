@@ -1,5 +1,6 @@
 <?php
 
+use Debugging\DebugData\Circle;
 use Model\Constants;
 use Model\Game;
 use Model\Order;
@@ -21,6 +22,7 @@ require_once 'My/MyDanger.php';
 
 require_once 'My/Filters/VelocityFilter.php';
 require_once 'My/Filters/ObstacleVelocityFilter.php';
+require_once 'My/Filters/ProjectileVelocityFilter.php';
 
 require_once 'My/Order/MyTargetVelocity.php';
 require_once 'My/Order/MyTargetDirection.php';
