@@ -19,10 +19,14 @@ require_once 'My/MyUnit.php';
 require_once 'My/MyAction.php';
 require_once 'My/MyDanger.php';
 
+
+require_once 'My/VelocityFilter.php';
+
 require_once 'My/Order/MyTargetVelocity.php';
 require_once 'My/Order/MyTargetDirection.php';
 require_once 'My/Order/MyActionOrder.php';
 
+require_once 'My/Strategy/MyStrategyData.php';
 require_once 'My/Strategy/Strategy0.php';
 require_once 'My/Strategy/Strategy1.php';
 require_once 'My/Strategy/Strategy2.php';
@@ -60,17 +64,27 @@ class MyStrategy
         foreach ($this->myUnit->myUnits as $unit) {
             $this->everyUnit($unit);
 
+            $strategyData = new MyStrategyData(
+                $this->myObstacles,
+                $this->myLoot,
+                $this->myUnit,
+                $this->myProjectiles,
+                $this->mySound,
+                $this->constants,
+                $debugInterface
+            );
+
             switch ($this->myDanger->getDangerLevel($unit)) {
                 case MyDanger::LEVEL_0:
-                    $strategy = new Strategy0($unit, $this->myObstacles, $this->myLoot, $this->myUnit, $this->myProjectiles, $this->mySound, $this->constants, $debugInterface);
+                    $strategy = new Strategy0($unit, $strategyData);
                     $order[$unit->id] = $strategy->getOrder();
                     break;
                 case MyDanger::LEVEL_1:
-                    $strategy = new Strategy1($unit, $this->myObstacles, $this->myLoot, $this->myUnit, $this->myProjectiles, $this->mySound, $this->constants, $debugInterface);
+                    $strategy = new Strategy1($unit, $strategyData);
                     $order[$unit->id] = $strategy->getOrder();
                     break;
                 case MyDanger::LEVEL_2:
-                    $strategy = new Strategy2($unit, $this->myObstacles, $this->myLoot, $this->myUnit, $this->myProjectiles, $this->mySound, $this->constants, $debugInterface);
+                    $strategy = new Strategy2($unit, $strategyData);
                     $order[$unit->id] = $strategy->getOrder();
                     break;
             }

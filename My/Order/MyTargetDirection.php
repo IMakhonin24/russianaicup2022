@@ -6,9 +6,9 @@ class MyTargetDirection
 {
     private Vec2 $targetDirection;
 
-    public function __construct(Vec2 $targetDirection)
+    public function __construct()
     {
-        $this->setTargetDirection($targetDirection);
+        $this->setTargetDirection(new Vec2(0, 0));
     }
 
     public function setTargetDirection(Vec2 $targetDirection): void

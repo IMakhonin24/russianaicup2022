@@ -1,14 +1,23 @@
 <?php
 
+use Model\Constants;
+use Model\Unit;
 use Model\Vec2;
 
 class MyTargetVelocity
 {
     private Vec2 $targetVelocity;
+    private VelocityFilter $velocityFilter;
 
-    public function __construct(Vec2 $targetVelocity)
+    public function __construct(
+        Unit $unit,
+        MyObstacles $myObstacles,
+        Constants $constants,
+        ?DebugInterface $debugInterface
+    )
     {
-        $this->setTargetVelocity($targetVelocity);
+        $this->setTargetVelocity(new Vec2(0, 0));
+        $this->velocityFilter = new VelocityFilter($unit, $myObstacles, $constants, $debugInterface);
     }
 
     public function setTargetVelocity(Vec2 $targetVelocity): void
@@ -18,7 +27,6 @@ class MyTargetVelocity
 
     public function getTargetVelocity(): Vec2
     {
-        return $this->targetVelocity;
+        return $this->velocityFilter->getFilteredVelocity($this->targetVelocity);
     }
-
 }

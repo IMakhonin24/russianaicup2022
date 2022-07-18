@@ -49,7 +49,9 @@ class Helper
     }
 
     /**
-     * Проверит, пересекает ли отрезок $x1$x2 окружность
+     * Проверит, пересекает ли прямая $x1$x2 окружность
+     *
+     * вернет true в случаях если отрезок рассматривать как бесконечную прямую
      *
      * @param Vec2 $x1
      * @param Vec2 $x2
@@ -57,7 +59,7 @@ class Helper
      * @param float $radius
      * @return bool
      */
-    public static function isIntersectionLineAndCircle(Vec2 $x1, Vec2 $x2, Vec2 $circleCentre, float $radius): bool
+    public static function isIntersectionLineAndCircle2(Vec2 $x1, Vec2 $x2, Vec2 $circleCentre, float $radius): bool
     {
         $dx01 = $x1->x - $circleCentre->x;
         $dy01 = $x1->y - $circleCentre->y;
@@ -163,6 +165,35 @@ class Helper
         $distanceAB = Helper::getDistance($lineA, $lineB);
         $k = $distanceAC / $distanceAB;
         return new Vec2($lineA->x + ($lineB->x - $lineA->x) * $k, $lineA->y + ($lineB->y - $lineA->y) * $k);
+    }
+
+    /**
+     * Проверит, пересекает ли отрезок $x1$x2 окружность
+     *
+     * @param Vec2 $x1
+     * @param Vec2 $x2
+     * @param Vec2 $circleCentre
+     * @param float $radius
+     * @return bool
+     */
+    public static function isIntersectionLineAndCircle(Vec2 $x1, Vec2 $x2, Vec2 $circleCentre, float $radius): bool
+    {
+        $x01 = $x1->x - $circleCentre->x;
+        $y01 = $x1->y - $circleCentre->y;
+        $x02 = $x2->x - $circleCentre->x;
+        $y02 = $x2->y - $circleCentre->y;
+
+        $dx = $x02 - $x01;
+        $dy = $y02 - $y01;
+
+        $a = $dx * $dx + $dy * $dy;
+        $b = 2 * ($x01 * $dx + $y01 * $dy);
+        $c = $x01 * $x01 + $y01 * $y01 - $radius * $radius;
+
+        if (-$b < 0) return ($c < 0);
+        if (-$b < (2 * $a)) return (4 * $a * $c - $b * $b < 0);
+
+        return ($a + $b + $c < 0);
     }
 
 }
