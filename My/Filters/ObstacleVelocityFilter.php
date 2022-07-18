@@ -6,7 +6,7 @@ use Model\Constants;
 use Model\Unit;
 use Model\Vec2;
 
-class VelocityFilter
+class ObstacleVelocityFilter implements VelocityFilter
 {
     private const ENABLE_DEBUG_FILTER = false;
 

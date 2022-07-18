@@ -19,8 +19,8 @@ require_once 'My/MyUnit.php';
 require_once 'My/MyAction.php';
 require_once 'My/MyDanger.php';
 
-
-require_once 'My/VelocityFilter.php';
+require_once 'My/Filters/VelocityFilter.php';
+require_once 'My/Filters/ObstacleVelocityFilter.php';
 
 require_once 'My/Order/MyTargetVelocity.php';
 require_once 'My/Order/MyTargetDirection.php';
